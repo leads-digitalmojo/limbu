@@ -3,8 +3,8 @@
 Everything you need for your first hour. Read this once, then work from
 [TEAM.md](TEAM.md) day to day.
 
-Your branch is **`feat/content-growth`**. Abiram is on `feat/gmb-seo`. Neither of
-us pushes to `main` except through a pull request.
+Your branch is **`anshita`** — named after you. Abiram works on `abiram`.
+Neither of us pushes to `main` except through a pull request.
 
 ---
 
@@ -13,7 +13,7 @@ us pushes to `main` except through a pull request.
 ```sh
 git clone https://github.com/leads-digitalmojo/limbu.git
 cd limbu
-git checkout feat/content-growth
+git checkout anshita
 npm install
 ```
 
@@ -115,7 +115,7 @@ store/slices/core.ts   store/types/index.ts    package.json
 Also **`app/dashboard.tsx` is mine** — it reads from every domain, so it has one
 owner on purpose. If you need something surfaced there, ask me.
 
-Need a change in a shared file? Do not put it in `feat/content-growth`. Instead:
+Need a change in a shared file? Do not put it in `anshita`. Instead:
 
 ```sh
 git checkout main && git pull
@@ -143,10 +143,10 @@ git pull --rebase origin main
 npm run typecheck            # must pass — it is the only gate we have
 git add -A
 git commit -m "Wallet: wire Razorpay order creation"
-git push origin feat/content-growth
+git push origin anshita
 
 # when a screen is finished
-gh pr create --base main --head feat/content-growth
+gh pr create --base main --head anshita
 ```
 
 **Step 3 is the one people skip.** Aim for one PR per finished screen — about

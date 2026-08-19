@@ -6,7 +6,7 @@ ownership. Stay inside your column below and merges stay trivial.
 
 ## Ownership
 
-| Area | Abiram — `feat/gmb-seo` | Anshita — `feat/content-growth` |
+| Area | Abiram (branch `abiram`) | Anshita (branch `anshita`) |
 |---|---|---|
 | Screens | `app/dashboard.tsx`, `gmb-connect`, `gmb-health`, `gmb-insights`, `reviews`, `review-reply`, `magic-qr`, `keywords`, `competitors` | `app/posts/index`, `app/posts/new`, `assets`, `social`, `website`, `leads`, `profile`, `wallet`, `pricing`, `settings` |
 | Components | `components/ReviewsScreen.tsx`, `components/QrCode.tsx` | `components/PostCreative.tsx` |
@@ -75,11 +75,11 @@ npm install && npm run typecheck
 git pull --rebase origin main
 
 # 2. work, commit, push to your own branch
-git push origin feat/gmb-seo          # Abiram
-git push origin feat/content-growth   # Anshita
+git push origin abiram     # Abiram
+git push origin anshita    # Anshita
 
 # 3. when a feature is done — PR into main, merge, carry on the same branch
-gh pr create --base main --head feat/gmb-seo
+gh pr create --base main --head abiram    # or --head anshita
 ```
 
 Step 3 is the one people skip. Aim for one PR per finished screen — roughly nine
