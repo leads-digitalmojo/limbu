@@ -1,4 +1,4 @@
-/* Google Business Profile domain — owner: Person A */
+/* Google Business Profile domain — owner: Abiram */
 
 export type Business = {
   id: string; name: string; cat: string; loc: string; city: string;

@@ -1,4 +1,4 @@
-/* Account, wallet & settings domain — owner: Person B */
+/* Account, wallet & settings domain — owner: Anshita */
 
 export type Tx = { id: string; type: 'credit' | 'debit'; label: string; amount: number; at: string; ref: string };
 

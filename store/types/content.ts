@@ -1,4 +1,4 @@
-/* AI content & brand assets domain — owner: Person B */
+/* AI content & brand assets domain — owner: Anshita */
 
 export type PostStatus = 'pending' | 'approved' | 'rejected' | 'scheduled' | 'posted';
 export type Platform = 'google' | 'facebook' | 'instagram' | 'pinterest' | 'linkedin' | 'youtube';

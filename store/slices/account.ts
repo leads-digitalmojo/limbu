@@ -1,5 +1,5 @@
 /* User, credit wallet, social connections, settings, notifications.
-   OWNER: Person B — note that `spend` is called from every AI feature in the app,
+   OWNER: Anshita — note that `spend` is called from every AI feature in the app,
    so treat its signature as public API. */
 import { daysAgo, rand, seedTx, uid } from '../../lib/mock';
 import type { Notification, Settings, Tx, User } from '../types';

@@ -1,5 +1,5 @@
 /* Website builder and lead inbox.
-   OWNER: Person B */
+   OWNER: Anshita */
 import { daysAgo, seedLeads, uid } from '../../lib/mock';
 import type { Lead, Website } from '../types';
 import type { Slice } from './shared';

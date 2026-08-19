@@ -1,5 +1,5 @@
 /* AI content: posts and brand assets.
-   OWNER: Person B */
+   OWNER: Anshita */
 import { seedPosts, uid } from '../../lib/mock';
 import type { Brand, Post } from '../types';
 import type { Slice } from './shared';

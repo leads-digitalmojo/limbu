@@ -1,4 +1,4 @@
-/* Website & leads domain — owner: Person B */
+/* Website & leads domain — owner: Anshita */
 
 export type LeadStatus = 'new' | 'contacted' | 'converted' | 'spam';
 

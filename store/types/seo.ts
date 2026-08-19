@@ -1,4 +1,4 @@
-/* Local SEO domain — owner: Person A */
+/* Local SEO domain — owner: Abiram */
 
 export type Keyword = { id: string; kw: string; vol: number; diff: number; cpc: string };
 

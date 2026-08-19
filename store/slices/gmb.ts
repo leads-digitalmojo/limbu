@@ -1,5 +1,5 @@
 /* Google Business Profile: locations, connection, reviews, Magic QR.
-   OWNER: Person A */
+   OWNER: Abiram */
 import { BUSINESSES, seedReviews } from '../../lib/mock';
 import type { Business, Qr, Review } from '../types';
 import type { Slice } from './shared';

@@ -6,7 +6,7 @@ ownership. Stay inside your column below and merges stay trivial.
 
 ## Ownership
 
-| Area | Person A — `feat/gmb-seo` | Person B — `feat/content-growth` |
+| Area | Abiram — `feat/gmb-seo` | Anshita — `feat/content-growth` |
 |---|---|---|
 | Screens | `app/dashboard.tsx`, `gmb-connect`, `gmb-health`, `gmb-insights`, `reviews`, `review-reply`, `magic-qr`, `keywords`, `competitors` | `app/posts/index`, `app/posts/new`, `assets`, `social`, `website`, `leads`, `profile`, `wallet`, `pricing`, `settings` |
 | Components | `components/ReviewsScreen.tsx`, `components/QrCode.tsx` | `components/PostCreative.tsx` |
@@ -42,3 +42,46 @@ inside a feature branch — that is the one thing guaranteed to conflict.
 4. Adding state: put it in the slice you own and it composes automatically. Do not
    add fields to `store/useStore.ts`.
 5. `package.json` is shared. Announce any dependency you add before you add it.
+
+## Setup — do this once, before your first commit
+
+We both push through the same `leads-digitalmojo` GitHub account, so GitHub
+cannot tell us apart on its own. Set your author identity in your clone so the
+commit history still shows who wrote what:
+
+```sh
+# Abiram
+git config --local user.name  "Abiram"
+git config --local user.email "abiram@limbu.local"
+
+# Anshita
+git config --local user.name  "Anshita"
+git config --local user.email "anshita@limbu.local"
+```
+
+Push access and commit authorship are separate things — the shared account
+handles the push, your local config decides whose name lands in `git log`.
+
+Then check the baseline is clean before writing anything:
+
+```sh
+npm install && npm run typecheck
+```
+
+## The daily loop
+
+```sh
+# 1. every morning — pick up whatever the other person merged
+git pull --rebase origin main
+
+# 2. work, commit, push to your own branch
+git push origin feat/gmb-seo          # Abiram
+git push origin feat/content-growth   # Anshita
+
+# 3. when a feature is done — PR into main, merge, carry on the same branch
+gh pr create --base main --head feat/gmb-seo
+```
+
+Step 3 is the one people skip. Aim for one PR per finished screen — roughly nine
+small merges each — not one enormous merge at the end. The branches are
+long-lived: they are not deleted after a PR, you keep working on the same one.
