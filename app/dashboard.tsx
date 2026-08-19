@@ -1,13 +1,14 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Icon, IconName } from '../components/Icon';
 import { StatCard } from '../components/StatCard';
 import { LineChart } from '../components/charts';
 import {
   Badge, Between, Button, Card, CardBody, CardHead, Cols, Grid, IconTile, LinkButton,
-  Muted, PageHeader, Row, Segment, Stack, T, Tone, useWork,
+  Muted, PageHeader, Row, Segment, Stack, T, Tone,
 } from '../components/ui';
+import { gmbApi } from '../lib/api/gmb';
 import { fmt } from '../lib/format';
 import { lastDays, series } from '../lib/mock';
 import { useBiz, useStore } from '../store/useStore';
@@ -40,18 +41,36 @@ export default function Dashboard() {
   const { c, narrow } = useTheme();
   const router = useRouter();
   const biz = useBiz();
-  const { user, posts, reviews, leads, gmbConnected, social } = useStore();
+  const { user, posts, reviews, leads, gmbConnected, social, setGmbConnection } = useStore();
   const toast = useUI((s) => s.toast);
-  const { run, isBusy } = useWork();
+  const [refreshing, setRefreshing] = useState(false);
 
   const [range, setRange] = useState('14');
   const n = Number(range);
   const [chart, setChart] = useState(() => ({ views: series(14, 280, 90), calls: series(14, 46, 22), labels: lastDays(14) }));
+  const [chartSource, setChartSource] = useState<'live' | 'demo'>('demo');
+
+  async function loadChart(k: number): Promise<'live' | 'demo'> {
+    if (biz.googleLocationId) {
+      try {
+        const live = await gmbApi.getInsights(biz.googleLocationId, k);
+        setChart({ views: live.views, calls: live.calls, labels: live.labels });
+        setChartSource('live');
+        return 'live';
+      } catch {
+        toast('Could not load live data', 'Showing demo data instead', 'err');
+      }
+    }
+    setChart({ views: series(k, 280, 90), calls: series(k, 46, 22), labels: lastDays(k) });
+    setChartSource('demo');
+    return 'demo';
+  }
+
+  useEffect(() => { loadChart(n); }, [biz.googleLocationId]);
 
   const changeRange = (r: string) => {
     setRange(r);
-    const k = Number(r);
-    setChart({ views: series(k, 280, 90), calls: series(k, 46, 22), labels: lastDays(k) });
+    loadChart(Number(r));
   };
 
   const noReply = reviews.filter((r) => !r.reply).length;
@@ -68,8 +87,16 @@ export default function Dashboard() {
         sub={`Here is how ${biz.name} is performing on Google and social this fortnight.`}
         actions={
           <>
-            <Button label="Refresh" icon="refresh" loading={isBusy('refresh')}
-              onPress={() => run('refresh', 1000, () => toast('Dashboard synced', 'Latest Google data pulled', 'ok'))} />
+            <Button label="Refresh" icon="refresh" loading={refreshing}
+              onPress={async () => {
+                setRefreshing(true);
+                const [source] = await Promise.all([
+                  loadChart(n),
+                  gmbApi.status().then((s) => setGmbConnection(s.connected, s.email)).catch(() => {}),
+                ]);
+                setRefreshing(false);
+                toast('Dashboard synced', source === 'live' ? 'Latest Google data pulled' : 'Refreshed (demo data)', 'ok');
+              }} />
             <LinkButton label="Create Magic Post" href="/posts/new" variant="primary" icon="wand" />
           </>
         }
@@ -112,8 +139,15 @@ export default function Dashboard() {
           <>
             <Card>
               <CardHead title="Growth this fortnight" sub="Profile views vs calls from your Google Business Profile"
-                right={<Segment value={range} onChange={changeRange}
-                  items={[{ key: '14', label: '14d' }, { key: '30', label: '30d' }, { key: '90', label: '90d' }]} />} />
+                right={
+                  <Row gap={8} wrap={false}>
+                    {chartSource === 'live'
+                      ? <Badge label="Live from Google" tone="green" icon="checkCircle" />
+                      : <Badge label="Demo data" tone="amber" />}
+                    <Segment value={range} onChange={changeRange}
+                      items={[{ key: '14', label: '14d' }, { key: '30', label: '30d' }, { key: '90', label: '90d' }]} />
+                  </Row>
+                } />
               <CardBody>
                 <LineChart labels={chart.labels}
                   series={[
