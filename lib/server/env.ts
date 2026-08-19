@@ -1,0 +1,16 @@
+/* Server-only env access. Never import this from app/ or components/ —
+   it throws if a required var is missing, which is only safe to hit at
+   request time on the server. */
+
+function required(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var: ${name}`);
+  return v;
+}
+
+export const env = {
+  googleClientId: () => required('GOOGLE_CLIENT_ID'),
+  googleClientSecret: () => required('GOOGLE_CLIENT_SECRET'),
+  googleRedirectUri: () => required('GOOGLE_REDIRECT_URI'),
+  sessionSecret: () => required('SESSION_SECRET'),
+};

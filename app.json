@@ -19,6 +19,6 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
-    "web": { "favicon": "./assets/favicon.png", "bundler": "metro", "output": "single" }
+    "web": { "favicon": "./assets/favicon.png", "bundler": "metro", "output": "server" }
   }
 }

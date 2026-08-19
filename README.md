@@ -105,9 +105,12 @@ rank audit 5×5 350 (3×3 180, 1×1 60) · website generation 500.
 
 ## Backend seams
 
-The UI is fully wired; every backend call is simulated in `store/useStore.ts` and the
-screens' `useWork()` timers. The integrations to build first are Google OAuth +
-Business Profile API, the Maps rank scrape, image generation, and Razorpay.
+The UI is fully wired. Most backend calls are still simulated through the screens'
+`useWork()` timers, but there is now a real server: Expo API routes under `app/api/`,
+called from typed client wrappers in `lib/api/`. Google OAuth for the Business
+Profile connection (`/gmb-connect`) is wired end to end — see the Backend section
+in [TEAM.md](TEAM.md) for how to configure it and where the next integrations
+(Maps rank scrape, image generation, Razorpay) should plug in.
 
 ## Team
 

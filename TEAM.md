@@ -27,11 +27,32 @@ components/charts.tsx  theme/tokens.ts         theme/ThemeProvider.tsx
 lib/nav.ts             lib/format.ts           lib/mock.ts
 app/_layout.tsx        store/useStore.ts       store/slices/shared.ts
 store/slices/core.ts   store/types/index.ts    package.json
+lib/api/client.ts      lib/server/             app.json
+tsconfig.json          .env.example
 ```
 
 Need a change there? Small `chore/…` branch off `main`, merge it to `main` the
 same day, tell the other person, both rebase. Never bundle a shared-core change
 inside a feature branch — that is the one thing guaranteed to conflict.
+
+## Backend
+
+There is a real server now: Expo API routes under `app/api/**/+api.ts`
+(`app.json` → `web.output: "server"`, added in `chore/api-foundation`). Each
+domain gets a client-side wrapper in `lib/api/<domain>.ts` that calls its own
+`app/api/<domain>/**/+api.ts` routes through the shared `lib/api/client.ts`
+fetch helper — same split as the store slices, same ownership rules apply.
+`lib/server/` (env validation, the signed session cookie) is shared plumbing,
+not a domain.
+
+`app/api/gmb/**` is live: `oauth/start` and `oauth/callback` run the real
+Google OAuth exchange, `status` and `disconnect` read/clear the session. Copy
+`.env.example` to `.env` and fill in a Google OAuth client (console.cloud.google.com)
+to test it end to end; without one, `status`/`disconnect` still work, only the
+Google redirect requires real credentials.
+
+When you add a domain's routes, add its `lib/api/<domain>.ts` alongside — don't
+call `fetch()` directly from a screen.
 
 ## Rules
 
