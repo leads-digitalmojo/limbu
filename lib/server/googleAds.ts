@@ -7,7 +7,7 @@
    unlike GMB's OAuth) — generate one once via Google's OAuth 2.0 Playground
    (https://developers.google.com/oauthplayground) using this app's
    GOOGLE_CLIENT_ID/SECRET and the https://www.googleapis.com/auth/adwords
-   scope, then put it in GOOGLE_ADS_REFRESH_TOKEN. See .env.example. */
+   scope, then put it in GOOGLE_REFRESH_TOKEN. See .env.example. */
 import { env } from './env';
 
 const API_VERSION = 'v17';

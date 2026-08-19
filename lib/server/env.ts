@@ -16,8 +16,8 @@ export const env = {
 
   // Google Ads API — a single agency-level credential, not a per-user OAuth
   // session like the GMB flow. See lib/server/googleAds.ts.
-  googleAdsDeveloperToken: () => required('GOOGLE_ADS_DEVELOPER_TOKEN'),
-  googleAdsRefreshToken: () => required('GOOGLE_ADS_REFRESH_TOKEN'),
-  googleAdsLoginCustomerId: () => required('GOOGLE_ADS_LOGIN_CUSTOMER_ID'),
-  googleAdsCustomerId: () => required('GOOGLE_ADS_CUSTOMER_ID'),
+  googleAdsDeveloperToken: () => required('GOOGLE_DEVELOPER_TOKEN'),
+  googleAdsRefreshToken: () => required('GOOGLE_REFRESH_TOKEN'),
+  googleAdsLoginCustomerId: () => required('GOOGLE_MCC_ID'), // manager account ID — "MCC" is Google's older name for it
+  googleAdsCustomerId: () => required('GOOGLE_CUSTOMER_ID'),
 };
