@@ -20,4 +20,9 @@ export const env = {
   googleAdsRefreshToken: () => required('GOOGLE_REFRESH_TOKEN'),
   googleAdsLoginCustomerId: () => required('GOOGLE_MCC_ID'), // manager account ID — "MCC" is Google's older name for it
   googleAdsCustomerId: () => required('GOOGLE_CUSTOMER_ID'),
+
+  // Google Maps Platform — Places API (New) + Geocoding API, for Competitor
+  // Analysis's geo-grid rank checker. A plain API key, billed per request —
+  // see lib/server/googleMaps.ts.
+  googleMapsApiKey: () => required('GOOGLE_MAPS_API_KEY'),
 };
