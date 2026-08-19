@@ -1,11 +1,12 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import { Icon } from '../components/Icon';
 import {
   Avatar, Badge, Between, Button, Card, CardBody, CardHead, Cols, IconTile, Muted,
   PageHeader, Row, Stack, T, useWork,
 } from '../components/ui';
+import { gmbApi } from '../lib/api/gmb';
 import { useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
 import { useTheme } from '../theme/ThemeProvider';
@@ -26,9 +27,37 @@ const DEPENDENTS: [any, string, string][] = [
 export default function GmbConnect() {
   const { c } = useTheme();
   const router = useRouter();
-  const { businesses, activeBiz, gmbConnected, user, setActiveBiz, patch } = useStore();
+  const params = useLocalSearchParams<{ connected?: string; error?: string }>();
+  const { businesses, activeBiz, gmbConnected, gmbEmail, user, setActiveBiz, setGmbConnection } = useStore();
   const { toast, openModal, closeModal } = useUI();
   const { run, isBusy } = useWork();
+
+  // the OAuth callback route redirects here with ?connected=1 or ?error=...
+  React.useEffect(() => {
+    if (params.error) {
+      toast('Google connection failed', params.error, 'err');
+      router.setParams({ error: undefined });
+      return;
+    }
+    if (params.connected) {
+      gmbApi.status().then((s) => setGmbConnection(s.connected, s.email))
+        .then(() => toast('Google Business Profile connected', undefined, 'ok'));
+      router.setParams({ connected: undefined });
+    }
+  }, [params.connected, params.error]);
+
+  // pick up a session from an earlier visit (e.g. after a reload)
+  React.useEffect(() => {
+    gmbApi.status().then((s) => setGmbConnection(s.connected, s.email)).catch(() => {});
+  }, []);
+
+  const connect = () => {
+    if (Platform.OS !== 'web') {
+      toast('Google sign-in on device is coming soon', 'Use the browser build for now', 'err');
+      return;
+    }
+    gmbApi.startConnect();
+  };
 
   const disconnect = () => openModal({
     title: 'Disconnect Google?',
@@ -36,7 +65,12 @@ export default function GmbConnect() {
     footer: (
       <Row gap={9}>
         <Button label="Cancel" variant="ghost" onPress={closeModal} />
-        <Button label="Disconnect" variant="danger" onPress={() => { patch({ gmbConnected: false }); closeModal(); toast('Disconnected', undefined, 'err'); }} />
+        <Button label="Disconnect" variant="danger" onPress={async () => {
+          await gmbApi.disconnect().catch(() => {});
+          setGmbConnection(false);
+          closeModal();
+          toast('Disconnected', undefined, 'err');
+        }} />
       </Row>
     ),
   });
@@ -126,14 +160,12 @@ export default function GmbConnect() {
                   {gmbConnected ? 'Google account connected' : 'Connect with Google'}
                 </T>
                 <Muted style={{ textAlign: 'center', marginTop: 4 }}>
-                  {gmbConnected ? user.email : 'Sign in with the Google account that owns your Business Profile.'}
+                  {gmbConnected ? (gmbEmail ?? user.email) : 'Sign in with the Google account that owns your Business Profile.'}
                 </Muted>
                 <View style={{ width: '100%', marginTop: 16 }}>
                   {gmbConnected
                     ? <Button label="Disconnect" icon="logout" block onPress={disconnect} />
-                    : <Button label="Continue with Google" variant="primary" size="lg" icon="google" block
-                        loading={isBusy('conn')}
-                        onPress={() => run('conn', 1800, () => { patch({ gmbConnected: true }); toast('Google Business Profile connected', undefined, 'ok'); })} />}
+                    : <Button label="Continue with Google" variant="primary" size="lg" icon="google" block onPress={connect} />}
                 </View>
               </View>
             </Card>

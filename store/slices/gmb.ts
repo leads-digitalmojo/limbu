@@ -6,6 +6,8 @@ import type { Slice } from './shared';
 export type GmbState = {
   businesses: Business[];
   gmbConnected: boolean;
+  /** the Google account email behind gmbConnected, from the real OAuth session — null until synced */
+  gmbEmail: string | null;
   reviews: Review[];
   qr: Qr;
 };
@@ -13,6 +15,7 @@ export type GmbState = {
 export const initialGmb = (): GmbState => ({
   businesses: [],
   gmbConnected: false,
+  gmbEmail: null,
   reviews: [],
   qr: { slug: '', scans: 0, reviewsCollected: 0, threshold: 4 },
 });
@@ -20,6 +23,7 @@ export const initialGmb = (): GmbState => ({
 export type GmbActions = {
   setReviewReply: (id: string, reply: string | null, auto?: boolean) => void;
   setQr: (p: Partial<Qr>) => void;
+  setGmbConnection: (connected: boolean, email?: string | null) => void;
 };
 
 export const createGmb: Slice<GmbActions> = (set, get) => ({
@@ -27,4 +31,6 @@ export const createGmb: Slice<GmbActions> = (set, get) => ({
     set({ reviews: get().reviews.map((r) => (r.id === id ? { ...r, reply, replyAuto: auto } : r)) }),
 
   setQr: (p) => set({ qr: { ...get().qr, ...p } }),
+
+  setGmbConnection: (gmbConnected, gmbEmail = null) => set({ gmbConnected, gmbEmail }),
 });
