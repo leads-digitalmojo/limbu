@@ -8,6 +8,7 @@ import {
   Badge, Between, Button, Card, CardBody, CardHead, Chip, Cols, Empty, Grid, Input,
   Muted, PageHeader, Progress, Row, T, useWork,
 } from '../components/ui';
+import { keywordsApi } from '../lib/api/keywords';
 import { fmt } from '../lib/format';
 import { KEYWORD_SEEDS, rand, uid } from '../lib/mock';
 import { useBiz, useStore } from '../store/useStore';
@@ -28,22 +29,42 @@ export default function Keywords() {
   const [city, setCity] = useState(biz.city);
   const [results, setResults] = useState<Idea[]>([]);
   const [lastQ, setLastQ] = useState('');
+  const [source, setSource] = useState<'live' | 'demo'>('demo');
 
-  const search = (seed?: string) => {
+  const demoIdeas = (term: string): Idea[] => {
+    const base: Idea[] = KEYWORD_SEEDS.map(([kw, vol, diff]) => ({ kw, vol, diff, cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
+    const extra: Idea[] = [
+      `${term} near me`, `${term} in ${city.toLowerCase()}`, `best ${term}`, `affordable ${term}`,
+      `${term} price`, `${term} reviews`, `24x7 ${term}`, `top rated ${term}`,
+    ].map((kw) => ({ kw, vol: rand(140, 9600), diff: rand(12, 82), cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
+    return [...extra, ...base].sort((a, b) => b.vol - a.vol).slice(0, 16);
+  };
+
+  const [searching, setSearching] = useState(false);
+
+  const search = async (seed?: string) => {
     const term = (seed ?? q).trim();
     if (!term) return toast('Enter a service', 'e.g. dental clinic', 'err');
     setQ(term);
-    run('search', 1300, () => {
-      const base: Idea[] = KEYWORD_SEEDS.map(([kw, vol, diff]) => ({ kw, vol, diff, cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
-      const extra: Idea[] = [
-        `${term} near me`, `${term} in ${city.toLowerCase()}`, `best ${term}`, `affordable ${term}`,
-        `${term} price`, `${term} reviews`, `24x7 ${term}`, `top rated ${term}`,
-      ].map((kw) => ({ kw, vol: rand(140, 9600), diff: rand(12, 82), cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
-      const all = [...extra, ...base].sort((a, b) => b.vol - a.vol).slice(0, 16);
+    setSearching(true);
+    try {
+      const { ideas } = await keywordsApi.getIdeas(term);
+      const all = ideas.slice(0, 16);
       setResults(all);
       setLastQ(term);
-      toast(`Found ${all.length} keywords`, 'Ranked by monthly search volume', 'ok');
-    });
+      setSource('live');
+      toast(`Found ${all.length} keywords`, 'Real search volume from Google Ads', 'ok');
+      return;
+    } catch {
+      // no Ads credentials configured yet, or Google rejected the request — demo data either way
+    } finally {
+      setSearching(false);
+    }
+    const all = demoIdeas(term);
+    setResults(all);
+    setLastQ(term);
+    setSource('demo');
+    toast(`Found ${all.length} keywords`, 'Demo data — ranked by monthly search volume', 'ok');
   };
 
   const importExcel = () => openModal({
@@ -88,7 +109,7 @@ export default function Keywords() {
                 placeholder="Enter a service or business type — e.g. dental clinic" />
             </View>
             <View style={{ width: 150 }}><Input value={city} onChangeText={setCity} placeholder="City" /></View>
-            <Button label="Find keywords" variant="primary" icon="sparkles" loading={isBusy('search')} onPress={() => search()} />
+            <Button label="Find keywords" variant="primary" icon="sparkles" loading={searching} onPress={() => search()} />
           </Row>
           <Row gap={8} style={{ marginTop: 12 }}>
             <Muted>Try:</Muted>
@@ -113,7 +134,14 @@ export default function Keywords() {
         main={
           <Card>
             <CardHead title="Keyword ideas"
-              sub={results.length ? `${results.length} ideas for “${lastQ}” in ${city}` : 'Search to see ideas for your area'} />
+              sub={results.length
+                ? `${results.length} ideas for "${lastQ}"${source === 'live' ? '' : ` in ${city}`}`
+                : 'Search to see ideas for your area'}
+              right={results.length
+                ? (source === 'live'
+                    ? <Badge label="Live from Google Ads" tone="green" icon="checkCircle" />
+                    : <Badge label="Demo data" tone="amber" />)
+                : undefined} />
             {results.length === 0 ? (
               <Empty icon="search" title="Start a search" desc="Enter a service above to see the keywords customers use near you." />
             ) : (
