@@ -4,7 +4,7 @@ import { Platform, Pressable, View } from 'react-native';
 import { Icon } from '../components/Icon';
 import {
   Avatar, Badge, Between, Button, Card, CardBody, CardHead, Cols, IconTile, Muted,
-  PageHeader, Row, Stack, T, useWork,
+  PageHeader, Row, Stack, T,
 } from '../components/ui';
 import { gmbApi } from '../lib/api/gmb';
 import { useStore } from '../store/useStore';
@@ -30,7 +30,7 @@ export default function GmbConnect() {
   const params = useLocalSearchParams<{ connected?: string; error?: string }>();
   const { businesses, activeBiz, gmbConnected, gmbEmail, user, setActiveBiz, setGmbConnection } = useStore();
   const { toast, openModal, closeModal } = useUI();
-  const { run, isBusy } = useWork();
+  const [loadingLocations, setLoadingLocations] = React.useState(false);
 
   // the OAuth callback route redirects here with ?connected=1 or ?error=...
   React.useEffect(() => {
@@ -75,22 +75,45 @@ export default function GmbConnect() {
     ),
   });
 
-  const addLocation = () => run('add', 1400, () => openModal({
-    title: 'Select a location to connect',
-    content: (
-      <View>
-        <Muted size={13} style={{ marginBottom: 12 }}>These Business Profiles are available on {user.email}.</Muted>
-        <Stack gap={9}>
-          {['Sunrise Dental — Thane', 'Sunrise Ortho Centre', 'Sunrise Dental — Pune'].map((nm) => (
-            <Card key={nm} pad={14} onPress={() => { closeModal(); toast('Location connected', 'Syncing reviews and insights…', 'ok'); }}>
-              <T size={13} weight="700">{nm}</T>
-              <Muted>Dental clinic • Unverified</Muted>
-            </Card>
-          ))}
-        </Stack>
-      </View>
-    ),
-  }));
+  // Pulls the real Business Profile locations for the connected Google account.
+  // Picking one doesn't merge it into `businesses` yet — Google's location
+  // object doesn't carry a rating, review count or hours the way our demo
+  // Business type expects, and those need their own API calls (Places,
+  // Business Calendar) that aren't wired up. Showing a fabricated number here
+  // would be worse than saying "not yet".
+  const addLocation = async () => {
+    setLoadingLocations(true);
+    try {
+      const { locations } = await gmbApi.listLocations();
+      openModal({
+        title: 'Select a location to connect',
+        content: (
+          <View>
+            <Muted size={13} style={{ marginBottom: 12 }}>Business Profiles available on {gmbEmail ?? user.email}.</Muted>
+            {locations.length === 0 ? (
+              <Muted size={13}>No additional locations found on this Google account.</Muted>
+            ) : (
+              <Stack gap={9}>
+                {locations.map((l) => (
+                  <Card key={l.id} pad={14} onPress={() => {
+                    closeModal();
+                    toast('Location found', `${l.name} — full sync lands in a follow-up release`, 'ok');
+                  }}>
+                    <T size={13} weight="700">{l.name}</T>
+                    <Muted>{[l.primaryCategory, l.address].filter(Boolean).join(' • ') || 'No address on file'}</Muted>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </View>
+        ),
+      });
+    } catch {
+      toast('Could not load locations', 'Check that a Google OAuth client is configured — see .env.example', 'err');
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
 
   return (
     <View>
@@ -103,7 +126,7 @@ export default function GmbConnect() {
           <>
             <Card>
               <CardHead title="Connected locations" sub={`${businesses.length} location${businesses.length > 1 ? 's' : ''} linked to this account`}
-                right={<Button label="Connect location" size="sm" variant="primary" icon="plus" loading={isBusy('add')} onPress={addLocation} />} />
+                right={<Button label="Connect location" size="sm" variant="primary" icon="plus" loading={loadingLocations} onPress={addLocation} />} />
               <CardBody>
                 <Stack gap={12}>
                   {businesses.map((b) => (
