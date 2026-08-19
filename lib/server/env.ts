@@ -13,4 +13,11 @@ export const env = {
   googleClientSecret: () => required('GOOGLE_CLIENT_SECRET'),
   googleRedirectUri: () => required('GOOGLE_REDIRECT_URI'),
   sessionSecret: () => required('SESSION_SECRET'),
+
+  // Google Ads API — a single agency-level credential, not a per-user OAuth
+  // session like the GMB flow. See lib/server/googleAds.ts.
+  googleAdsDeveloperToken: () => required('GOOGLE_ADS_DEVELOPER_TOKEN'),
+  googleAdsRefreshToken: () => required('GOOGLE_ADS_REFRESH_TOKEN'),
+  googleAdsLoginCustomerId: () => required('GOOGLE_ADS_LOGIN_CUSTOMER_ID'),
+  googleAdsCustomerId: () => required('GOOGLE_ADS_CUSTOMER_ID'),
 };
