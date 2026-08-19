@@ -1,5 +1,6 @@
 /* Google Business Profile: locations, connection, reviews, Magic QR.
    OWNER: Abiram */
+import { uid } from '../../lib/mock';
 import type { Business, Qr, Review } from '../types';
 import type { Slice } from './shared';
 
@@ -24,6 +25,10 @@ export type GmbActions = {
   setReviewReply: (id: string, reply: string | null, auto?: boolean) => void;
   setQr: (p: Partial<Qr>) => void;
   setGmbConnection: (connected: boolean, email?: string | null) => void;
+  /** adds a real Google location picked in "Connect location". Rating, review
+      count and hours are unknown until their own sync lands (Places API,
+      Business Calendar API) — 0/false/'' means "not yet synced", not "none". */
+  addBusiness: (l: { googleLocationId: string; name: string; category: string | null; address: string | null; phone: string | null }) => string;
 };
 
 export const createGmb: Slice<GmbActions> = (set, get) => ({
@@ -33,4 +38,18 @@ export const createGmb: Slice<GmbActions> = (set, get) => ({
   setQr: (p) => set({ qr: { ...get().qr, ...p } }),
 
   setGmbConnection: (gmbConnected, gmbEmail = null) => set({ gmbConnected, gmbEmail }),
+
+  addBusiness: (l) => {
+    const existing = get().businesses.find((b) => b.googleLocationId === l.googleLocationId);
+    if (existing) return existing.id;
+
+    const id = uid('b');
+    const business: Business = {
+      id, name: l.name, cat: l.category ?? 'Uncategorized', loc: l.address ?? '', city: '',
+      rating: 0, reviews: 0, phone: l.phone ?? '', site: '', verified: false, hours: '',
+      googleLocationId: l.googleLocationId,
+    };
+    set({ businesses: [...get().businesses, business] });
+    return id;
+  },
 });

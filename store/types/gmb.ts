@@ -3,6 +3,8 @@
 export type Business = {
   id: string; name: string; cat: string; loc: string; city: string;
   rating: number; reviews: number; phone: string; site: string; verified: boolean; hours: string;
+  /** the real Google resource name (e.g. "locations/12345"), once connected via OAuth — null for demo data */
+  googleLocationId?: string | null;
 };
 
 export type Review = {

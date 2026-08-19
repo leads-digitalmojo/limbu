@@ -28,7 +28,7 @@ export default function GmbConnect() {
   const { c } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ connected?: string; error?: string }>();
-  const { businesses, activeBiz, gmbConnected, gmbEmail, user, setActiveBiz, setGmbConnection } = useStore();
+  const { businesses, activeBiz, gmbConnected, gmbEmail, user, setActiveBiz, setGmbConnection, addBusiness } = useStore();
   const { toast, openModal, closeModal } = useUI();
   const [loadingLocations, setLoadingLocations] = React.useState(false);
 
@@ -75,12 +75,11 @@ export default function GmbConnect() {
     ),
   });
 
-  // Pulls the real Business Profile locations for the connected Google account.
-  // Picking one doesn't merge it into `businesses` yet — Google's location
-  // object doesn't carry a rating, review count or hours the way our demo
-  // Business type expects, and those need their own API calls (Places,
-  // Business Calendar) that aren't wired up. Showing a fabricated number here
-  // would be worse than saying "not yet".
+  // Pulls the real Business Profile locations for the connected Google account
+  // and adds the picked one to the store. Rating, review count and hours come
+  // in as 0/false/'' — Google's location object doesn't carry them (that's
+  // the Places API and the Business Calendar API, not wired up yet) — meaning
+  // "not yet synced", not a fabricated number.
   const addLocation = async () => {
     setLoadingLocations(true);
     try {
@@ -96,8 +95,12 @@ export default function GmbConnect() {
               <Stack gap={9}>
                 {locations.map((l) => (
                   <Card key={l.id} pad={14} onPress={() => {
+                    const id = addBusiness({
+                      googleLocationId: l.id, name: l.name, category: l.primaryCategory, address: l.address, phone: l.phone,
+                    });
+                    setActiveBiz(id);
                     closeModal();
-                    toast('Location found', `${l.name} — full sync lands in a follow-up release`, 'ok');
+                    toast('Location connected', 'Reviews and insights will start syncing shortly', 'ok');
                   }}>
                     <T size={13} weight="700">{l.name}</T>
                     <Muted>{[l.primaryCategory, l.address].filter(Boolean).join(' • ') || 'No address on file'}</Muted>
@@ -137,7 +140,10 @@ export default function GmbConnect() {
                           <View style={{ flexShrink: 1 }}>
                             <T size={13.5} weight="700">{b.name}</T>
                             <Muted>{b.cat} • {b.loc}</Muted>
-                            <Muted>{b.rating}★ ({b.reviews} reviews) • {b.phone}</Muted>
+                            <Muted>
+                              {b.googleLocationId && b.reviews === 0 ? 'Syncing rating and reviews…' : `${b.rating}★ (${b.reviews} reviews)`}
+                              {b.phone ? ` • ${b.phone}` : ''}
+                            </Muted>
                           </View>
                         </Row>
                         <Row gap={6}>
