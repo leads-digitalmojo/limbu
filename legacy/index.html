@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Limbu AI — Grow Your Business on Google</title>
+<meta name="description" content="Limbu AI — automate your Google Business Profile: AI posts, reviews, local SEO, websites and leads.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%23FACC15'/><text x='50' y='72' font-size='62' font-family='Montserrat,Arial' font-weight='800' text-anchor='middle' fill='%230F172B'>L</text></svg>">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" href="#/dashboard">
+        <span class="brand-mark">L</span>
+        <span class="brand-text">Limbu<span>AI</span></span>
+      </a>
+      <button class="icon-btn sidebar-close" data-action="toggle-sidebar" aria-label="Close menu" data-icon="x"></button>
+    </div>
+
+    <div class="biz-switch" data-action="open-biz">
+      <div class="biz-avatar">SD</div>
+      <div class="biz-meta">
+        <strong id="bizName">Sunrise Dental Care</strong>
+        <span id="bizLoc">Andheri West, Mumbai</span>
+      </div>
+      <span class="chev" data-icon="chevrons"></span>
+    </div>
+
+    <nav class="nav" id="nav"></nav>
+
+    <div class="sidebar-foot">
+      <div class="credit-card">
+        <div class="credit-row">
+          <span class="credit-label">Available credits</span>
+          <span class="badge badge-lemon" id="planBadge">Professional</span>
+        </div>
+        <div class="credit-value" id="sideCredits">0</div>
+        <div class="meter"><div class="meter-fill" id="creditMeter" style="width:64%"></div></div>
+        <a href="#/wallet" class="btn btn-primary btn-sm btn-block">Recharge wallet</a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" data-action="toggle-sidebar"></div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" data-action="toggle-sidebar" aria-label="Menu" data-icon="menu"></button>
+
+      <button class="search-trigger" data-action="open-search">
+        <span class="si" data-icon="search"></span>
+        <span class="st-text">Search features, tools, keywords…</span>
+        <kbd>⌘K</kbd>
+      </button>
+
+      <div class="topbar-right">
+        <a href="#/wallet" class="pill pill-credits" title="Wallet credits">
+          <span class="coin" data-icon="coin"></span><b id="topCredits">0</b>
+        </a>
+        <button class="icon-btn" data-action="toggle-theme" aria-label="Toggle theme" id="themeBtn" data-icon="moon"></button>
+        <button class="icon-btn has-dot" data-action="open-notif" aria-label="Notifications" id="notifBtn" data-icon="bell"></button>
+        <button class="avatar-btn" data-action="open-profile">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230F172B'/%3E%3Ccircle cx='32' cy='25' r='11' fill='%23FACC15'/%3E%3Cpath d='M8 64c0-14 11-22 24-22s24 8 24 22z' fill='%23FACC15'/%3E%3C/svg%3E" alt="Account">
+        </button>
+      </div>
+    </header>
+
+    <main class="view" id="view"></main>
+
+    <footer class="app-foot">
+      <span>© <span id="yr"></span> Limbu AI — Grow Your Business on Google</span>
+      <span class="foot-links">
+        <a href="#/pricing">Pricing</a><a href="#/settings">Settings</a><a href="#/social">Connections</a>
+      </span>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ COMMAND PALETTE ============ -->
+<div class="palette-wrap" id="palette" hidden>
+  <div class="palette-bg" data-action="close-search"></div>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Global search">
+    <div class="palette-input">
+      <span class="si" data-icon="search"></span>
+      <input type="text" id="paletteInput" placeholder="Search features, tools and actions…" autocomplete="off">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="palette-results" id="paletteResults"></div>
+    <div class="palette-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span><span><kbd>⌘K</kbd> toggle</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL + TOASTS ============ -->
+<div class="modal-wrap" id="modal" hidden>
+  <div class="modal-bg" data-action="close-modal"></div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <header class="modal-head">
+      <h3 id="modalTitle">Title</h3>
+      <button class="icon-btn" data-action="close-modal" aria-label="Close" data-icon="x"></button>
+    </header>
+    <div class="modal-body" id="modalBody"></div>
+    <footer class="modal-foot" id="modalFoot"></footer>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/views/dashboard.js"></script>
+<script src="js/views/posts.js"></script>
+<script src="js/views/reviews.js"></script>
+<script src="js/views/leads.js"></script>
+<script src="js/views/magicqr.js"></script>
+<script src="js/views/assets.js"></script>
+<script src="js/views/keywords.js"></script>
+<script src="js/views/competitors.js"></script>
+<script src="js/views/gmb.js"></script>
+<script src="js/views/website.js"></script>
+<script src="js/views/social.js"></script>
+<script src="js/views/account.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
