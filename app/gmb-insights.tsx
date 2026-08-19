@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { BarChart, LineChart } from '../components/charts';
 import { StatCard } from '../components/StatCard';
 import {
-  Between, Button, Card, CardBody, CardHead, Divider, Grid, IconTile, Muted, PageHeader,
+  Badge, Between, Button, Card, CardBody, CardHead, Divider, Grid, IconTile, Muted, PageHeader,
   Progress, Row, Select, Stack, T, useWork,
 } from '../components/ui';
+import { gmbApi } from '../lib/api/gmb';
 import { fmt } from '../lib/format';
 import { KEYWORD_SEEDS, lastDays, series } from '../lib/mock';
 import { useBiz } from '../store/useStore';
@@ -17,6 +18,16 @@ const RANGES = [
   { value: '90', label: 'Last 90 days' }, { value: '52', label: 'This year' },
 ];
 
+// Google's Performance API doesn't expose a search-vs-discovery-vs-branded
+// query breakdown, or peak-day/peak-time at all — those stay simulated
+// regardless of connection state. See app/api/gmb/insights+api.ts.
+function build(n: number) {
+  return {
+    labels: lastDays(n), views: series(n, 320, 110), searches: series(n, 540, 180),
+    calls: series(n, 52, 20), dirs: series(n, 88, 34), websiteClicks: undefined as number[] | undefined,
+  };
+}
+
 export default function GmbInsights() {
   const { c } = useTheme();
   const biz = useBiz();
@@ -25,14 +36,31 @@ export default function GmbInsights() {
 
   const [range, setRange] = useState('30');
   const [data, setData] = useState(() => build(30));
+  const [source, setSource] = useState<'live' | 'demo'>('demo');
+  const [loading, setLoading] = useState(false);
 
-  function build(n: number) {
-    return {
-      labels: lastDays(n), views: series(n, 320, 110), searches: series(n, 540, 180),
-      calls: series(n, 52, 20), dirs: series(n, 88, 34),
-    };
+  async function load(n: number) {
+    if (biz.googleLocationId) {
+      setLoading(true);
+      try {
+        const live = await gmbApi.getInsights(biz.googleLocationId, n);
+        setData({ labels: live.labels, views: live.views, searches: live.searchViews, calls: live.calls, dirs: live.directions, websiteClicks: live.websiteClicks });
+        setSource('live');
+        return;
+      } catch {
+        toast('Could not load live insights', 'Showing demo data instead', 'err');
+      } finally {
+        setLoading(false);
+      }
+    }
+    setData(build(n));
+    setSource('demo');
   }
+
+  useEffect(() => { load(Number(range)); }, [biz.googleLocationId]);
+
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const websiteTotal = data.websiteClicks ? sum(data.websiteClicks) : Math.round(sum(data.views) * 0.08);
 
   return (
     <View>
@@ -40,9 +68,12 @@ export default function GmbInsights() {
         sub={`How customers find and interact with ${biz.name} on Google Search and Maps.`}
         actions={
           <>
+            {source === 'live'
+              ? <Badge label="Live from Google" tone="green" icon="checkCircle" />
+              : <Badge label="Demo data" tone="amber" />}
             <View style={{ width: 180 }}>
               <Select value={range} options={RANGES}
-                onChange={(v) => { setRange(v); setData(build(Number(v))); toast('Range updated', RANGES.find((r) => r.value === v)?.label); }} />
+                onChange={(v) => { setRange(v); load(Number(v)); toast('Range updated', RANGES.find((r) => r.value === v)?.label); }} />
             </View>
             <Button label="Export" icon="download" loading={isBusy('x')}
               onPress={() => run('x', 900, () => toast('Exported', 'gmb-insights.csv', 'ok'))} />
@@ -75,7 +106,7 @@ export default function GmbInsights() {
             <CardHead title="Customer actions" sub="What people did after finding you" />
             <CardBody>
               <BarChart color={c.lemonHover} height={200}
-                data={[sum(data.calls), sum(data.dirs), Math.round(sum(data.views) * 0.08), Math.round(sum(data.views) * 0.03)]}
+                data={[sum(data.calls), sum(data.dirs), websiteTotal, Math.round(sum(data.views) * 0.03)]}
                 labels={['Calls', 'Directions', 'Website', 'Bookings']} />
             </CardBody>
           </Card>
