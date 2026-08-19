@@ -35,6 +35,12 @@ export function readSession<T = Record<string, unknown>>(req: Request): T | null
   }
 }
 
+/** the stored Google access token for the current session, or null if there isn't one */
+export function readAccessToken(req: Request): string | null {
+  const session = readSession<{ accessToken?: string }>(req);
+  return session?.accessToken ?? null;
+}
+
 export function sessionCookieHeader(value: string | null, maxAgeSeconds = 60 * 60 * 24 * 30): string {
   if (value === null) {
     return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
