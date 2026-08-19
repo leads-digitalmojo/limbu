@@ -10,7 +10,12 @@
    scope, then put it in GOOGLE_REFRESH_TOKEN. See .env.example. */
 import { env } from './env';
 
-const API_VERSION = 'v17';
+// Google ships a new Ads API version roughly monthly and sunsets old ones
+// within a year or so — a hardcoded version here WILL go stale. Override
+// with GOOGLE_ADS_API_VERSION once this one 404s; check
+// https://developers.google.com/google-ads/api/docs/release-notes for the
+// current one before bumping it blind.
+const API_VERSION = process.env.GOOGLE_ADS_API_VERSION || 'v25';
 
 let cached: { accessToken: string; expiresAt: number } | null = null;
 
