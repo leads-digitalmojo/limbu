@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { QrCode } from '../components/QrCode';
 import { StatCard } from '../components/StatCard';
@@ -20,11 +20,36 @@ export default function MagicQR() {
 
   const [slug, setSlug] = useState(qr.slug);
   const [threshold, setThreshold] = useState(String(qr.threshold));
+  // limbu.link isn't a real service yet — the routing/redirect backend behind
+  // a scanned code (rate the visit -> Google review or a private lead) needs
+  // a persistence layer this app doesn't have at all yet. The code itself is
+  // now a real, standards-compliant, scannable QR (see components/QrCode.tsx);
+  // what it points to is still a placeholder, same as the rest of the demo
+  // business's fictional URLs.
   const url = `https://limbu.link/r/${slug}`;
+
+  const [downloading, setDownloading] = useState(false);
+  const qrRef = useRef<any>(null);
 
   const copy = () => {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined') navigator.clipboard?.writeText(url);
     toast('Link copied', url, 'ok');
+  };
+
+  const download = () => {
+    if (Platform.OS !== 'web' || !qrRef.current) {
+      toast('Download not available here yet', 'Use the browser build for now', 'err');
+      return;
+    }
+    setDownloading(true);
+    qrRef.current.toDataURL((base64: string) => {
+      const a = document.createElement('a');
+      a.href = `data:image/png;base64,${base64}`;
+      a.download = `magic-qr-${slug}.png`;
+      a.click();
+      setDownloading(false);
+      toast('QR downloaded', `magic-qr-${slug}.png`, 'ok');
+    }, { width: 1024, height: 1024 });
   };
 
   return (
@@ -34,8 +59,7 @@ export default function MagicQR() {
         actions={
           <>
             <Button label="Copy link" icon="copy" onPress={copy} />
-            <Button label="Download QR" variant="primary" icon="download" loading={isBusy('dl')}
-              onPress={() => run('dl', 800, () => toast('QR downloaded', `magic-qr-${slug}.png`, 'ok'))} />
+            <Button label="Download QR" variant="primary" icon="download" loading={downloading} onPress={download} />
           </>
         } />
 
@@ -112,7 +136,7 @@ export default function MagicQR() {
             <CardBody>
               <View style={{ alignItems: 'center' }}>
                 <View style={{ padding: 16, backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: c.line }}>
-                  <QrCode value={url} />
+                  <QrCode value={url} getRef={(r) => { qrRef.current = r; }} />
                 </View>
                 <Muted size={11.5} style={{ marginTop: 12, textAlign: 'center' }}>{url}</Muted>
                 <Row gap={8} style={{ marginTop: 14, justifyContent: 'center' }}>
