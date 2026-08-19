@@ -108,3 +108,9 @@ rank audit 5×5 350 (3×3 180, 1×1 60) · website generation 500.
 The UI is fully wired; every backend call is simulated in `store/useStore.ts` and the
 screens' `useWork()` timers. The integrations to build first are Google OAuth +
 Business Profile API, the Maps rank scrape, image generation, and Razorpay.
+
+## Team
+
+Two people, two branches. See [TEAM.md](TEAM.md) for the ownership split and the
+frozen shared-core list. New to the project? [ANSHITA-START-HERE.md](ANSHITA-START-HERE.md)
+is the onboarding walkthrough for the content/growth half.
