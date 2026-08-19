@@ -7,6 +7,7 @@ import {
   Badge, Between, Button, Card, CardBody, CardHead, Cols, Divider, Empty, Field, Grid,
   IconTile, Input, Muted, PageHeader, Progress, Row, Segment, Select, Stack, T, useWork,
 } from '../components/ui';
+import { competitorsApi } from '../lib/api/competitors';
 import { fmt } from '../lib/format';
 import { COMPETITORS, KEYWORD_SEEDS, pick, rand, uid } from '../lib/mock';
 import { COSTS } from '../lib/nav';
@@ -60,17 +61,33 @@ export default function Competitors() {
   const [bizId, setBizId] = useState(activeBiz);
   const [grid, setGrid] = useState('5');
   const [audit, setAudit] = useState<Audit | null>(null);
+  const [auditing, setAuditing] = useState(false);
+  const [auditSource, setAuditSource] = useState<'live' | 'demo'>('demo');
 
   const n = Number(grid);
   const cost = COSTS.audit[n];
 
-  const runAudit = () => {
+  const runAudit = async () => {
     if (user.credits < cost) return toast('Not enough credits', `This audit needs ${cost} credits`, 'err');
-    run('audit', 2200, () => {
+    const businessName = businesses.find((b) => b.id === bizId)?.name ?? biz.name;
+
+    setAuditing(true);
+    try {
+      const { audit: live } = await competitorsApi.runAudit({ keyword: kw, city, businessName, gridSize: n as 1 | 3 | 5, bizId });
       spend(cost, `Competitor rank audit ${n}×${n}`);
-      setAudit(buildAudit(n, kw, city, bizId));
-      toast('Audit complete', `${cost} credits used`, 'ok');
-    });
+      setAudit(live);
+      setAuditSource('live');
+      toast('Audit complete', `${cost} credits used — live from Google Maps`, 'ok');
+      return;
+    } catch {
+      // no Maps credentials configured, city not found, or Google rejected the request — demo data either way
+    } finally {
+      setAuditing(false);
+    }
+    spend(cost, `Competitor rank audit ${n}×${n}`);
+    setAudit(buildAudit(n, kw, city, bizId));
+    setAuditSource('demo');
+    toast('Audit complete', `${cost} credits used — demo data`, 'ok');
   };
 
   const openPoint = (p: GridPoint, i: number, a: Audit) => openModal({
@@ -148,7 +165,7 @@ export default function Competitors() {
             </Field>
           </Grid>
           <Row gap={12} style={{ marginTop: 16 }}>
-            <Button label="Run rank audit" variant="primary" size="lg" icon="target" loading={isBusy('audit')} onPress={runAudit} />
+            <Button label="Run rank audit" variant="primary" size="lg" icon="target" loading={auditing} onPress={runAudit} />
             <Muted>Scans real Google Maps positions from up to {n * n} geographic points</Muted>
           </Row>
         </CardBody>
@@ -172,13 +189,18 @@ export default function Competitors() {
                 <Card>
                   <CardHead title="Geographic rank grid" sub={`“${audit.kw}” in ${audit.city} • ${audit.n}×${audit.n} points`}
                     right={
-                      <Row gap={6}>
-                        {[['#1', 0], ['2–3', 1], ['4–7', 2], ['8–12', 3], ['13–20', 4], ['20+', 5]].map(([l, i]) => (
-                          <Row key={String(l)} gap={4} wrap={false}>
-                            <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: RANK_COLORS[i as number] }} />
-                            <Muted size={11}>{l}</Muted>
-                          </Row>
-                        ))}
+                      <Row gap={10} wrap={false} align="center">
+                        {auditSource === 'live'
+                          ? <Badge label="Live from Google Maps" tone="green" icon="checkCircle" />
+                          : <Badge label="Demo data" tone="amber" />}
+                        <Row gap={6}>
+                          {[['#1', 0], ['2–3', 1], ['4–7', 2], ['8–12', 3], ['13–20', 4], ['20+', 5]].map(([l, i]) => (
+                            <Row key={String(l)} gap={4} wrap={false}>
+                              <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: RANK_COLORS[i as number] }} />
+                              <Muted size={11}>{l}</Muted>
+                            </Row>
+                          ))}
+                        </Row>
                       </Row>
                     } />
                   <CardBody>
