@@ -1,9 +1,10 @@
 /* Server-only Google Maps Platform access: Geocoding API (turn a typed
-   city/address into coordinates) and Places API — Text Search (New) (rank
-   a keyword search biased to a specific point). Both are billed per
-   request against the API key's project — every call here costs real
-   money, unlike the OAuth-based GMB/Ads integrations. See
-   app/api/competitors/audit+api.ts, the only caller. */
+   city/address into coordinates), Places API Text Search (New) (rank a
+   keyword search biased to a specific point) and Places API Autocomplete
+   (New) (city-name suggestions as the user types). All billed per request
+   against the API key's project — every call here costs real money,
+   unlike the OAuth-based GMB/Ads integrations. Callers: see
+   app/api/competitors/audit+api.ts and app/api/places/autocomplete+api.ts. */
 import { env } from './env';
 
 export type LatLng = { lat: number; lng: number };
@@ -53,4 +54,30 @@ export async function searchNearby(center: LatLng, query: string, radiusMeters =
     rating: p.rating ?? null,
     userRatingCount: p.userRatingCount ?? null,
   }));
+}
+
+export type CitySuggestion = { placeId: string; text: string };
+
+/** Places Autocomplete (New), restricted to cities/localities/regions —
+    real suggestions as the user types, not a fixed list of a few dozen
+    metros. Same billing/auth as the rest of this file. */
+export async function autocompleteCities(input: string): Promise<CitySuggestion[]> {
+  const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.googleMapsApiKey() },
+    body: JSON.stringify({
+      input,
+      includedPrimaryTypes: ['locality', 'administrative_area_level_3'],
+    }),
+  });
+  if (!res.ok) throw new Error(`Places Autocomplete error (${res.status}): ${await res.text()}`);
+  const data = (await res.json()) as {
+    suggestions?: { placePrediction?: { placeId: string; text?: { text?: string } } }[];
+  };
+
+  return (data.suggestions ?? [])
+    .map((s) => s.placePrediction)
+    .filter((p): p is { placeId: string; text?: { text?: string } } => !!p)
+    .map((p) => ({ placeId: p.placeId, text: p.text?.text ?? '' }))
+    .filter((s) => s.text);
 }
