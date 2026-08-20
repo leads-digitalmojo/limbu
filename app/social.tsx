@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Hero } from './dashboard';
 import { Icon, IconName } from '../components/Icon';
 import { StatCard } from '../components/StatCard';
@@ -7,6 +7,7 @@ import {
   Badge, Between, Button, Card, Grid, LinkButton, Muted, PageHeader, Row, T, useWork,
 } from '../components/ui';
 import { fmt } from '../lib/format';
+import { gmbApi } from '../lib/api/gmb';
 import { useBiz, useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
 import { useTheme } from '../theme/ThemeProvider';
@@ -24,17 +25,32 @@ const NETS: { k: string; name: string; icon: IconName; color: string; desc: stri
 export default function Social() {
   const { c } = useTheme();
   const biz = useBiz();
-  const { social, gmbConnected, posts, setSocial, patch } = useStore();
+  const { social, gmbConnected, posts, setSocial, setGmbConnection } = useStore();
   const { toast, openModal, closeModal } = useUI();
   const { run, isBusy } = useWork();
+
+  // gmbConnected defaults to false on every load and only reflects the real
+  // session once something has synced it — refresh it here too, since this
+  // screen shows it as the "Google" connection card.
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    gmbApi.status().then((s) => setGmbConnection(s.connected, s.email)).catch(() => {});
+  }, []);
 
   const isOn = (k: string) => (k === 'google' ? gmbConnected : !!social[k]);
   const connected = NETS.filter((nt) => isOn(nt.k)).length;
 
-  const connect = (k: string) => run(k, 1500, () => {
-    if (k === 'google') patch({ gmbConnected: true }); else setSocial(k, true);
-    toast('Connected', `${NETS.find((nt) => nt.k === k)!.name} is now linked`, 'ok');
-  });
+  const connect = (k: string) => {
+    if (k === 'google') {
+      if (Platform.OS !== 'web') return toast('Google sign-in on device is coming soon', 'Use the browser build for now', 'err');
+      gmbApi.startConnect();
+      return;
+    }
+    run(k, 1500, () => {
+      setSocial(k, true);
+      toast('Connected', `${NETS.find((nt) => nt.k === k)!.name} is now linked`, 'ok');
+    });
+  };
 
   const disconnect = (k: string) => openModal({
     title: `Disconnect ${NETS.find((nt) => nt.k === k)!.name}?`,
@@ -42,8 +58,13 @@ export default function Social() {
     footer: (
       <Row gap={9}>
         <Button label="Cancel" variant="ghost" onPress={closeModal} />
-        <Button label="Disconnect" variant="danger" onPress={() => {
-          if (k === 'google') patch({ gmbConnected: false }); else setSocial(k, false);
+        <Button label="Disconnect" variant="danger" onPress={async () => {
+          if (k === 'google') {
+            await gmbApi.disconnect().catch(() => {});
+            setGmbConnection(false);
+          } else {
+            setSocial(k, false);
+          }
           closeModal(); toast('Disconnected', undefined, 'err');
         }} />
       </Row>
