@@ -10,6 +10,8 @@ export type Business = {
 export type Review = {
   id: string; author: string; rating: number; text: string; bizId: string;
   createdAt: string; reply: string | null; replyAuto: boolean;
+  /** Google's own review ID, needed to post/remove a reply — null for demo data */
+  googleReviewId?: string | null;
 };
 
 export type Qr = { slug: string; scans: number; reviewsCollected: number; threshold: number };

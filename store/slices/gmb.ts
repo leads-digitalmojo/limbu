@@ -29,6 +29,9 @@ export type GmbActions = {
       count and hours are unknown until their own sync lands (Places API,
       Business Calendar API) — 0/false/'' means "not yet synced", not "none". */
   addBusiness: (l: { googleLocationId: string; name: string; category: string | null; address: string | null; phone: string | null }) => string;
+  /** replaces this business's reviews with a fresh sync from Google —
+      reviews belonging to other businesses are left untouched. */
+  syncReviews: (bizId: string, reviews: { googleReviewId: string; author: string; rating: number; text: string; createdAt: string; reply: string | null }[]) => void;
 };
 
 export const createGmb: Slice<GmbActions> = (set, get) => ({
@@ -51,5 +54,15 @@ export const createGmb: Slice<GmbActions> = (set, get) => ({
     };
     set({ businesses: [...get().businesses, business] });
     return id;
+  },
+
+  syncReviews: (bizId, reviews) => {
+    const others = get().reviews.filter((r) => r.bizId !== bizId);
+    const synced: Review[] = reviews.map((r) => ({
+      id: uid('rev'), bizId, googleReviewId: r.googleReviewId,
+      author: r.author, rating: r.rating, text: r.text, createdAt: r.createdAt,
+      reply: r.reply, replyAuto: false,
+    }));
+    set({ reviews: [...others, ...synced] });
   },
 });
