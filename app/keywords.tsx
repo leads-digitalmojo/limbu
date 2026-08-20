@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { BarChart } from '../components/charts';
+import { CityInput } from '../components/CityInput';
 import { Icon } from '../components/Icon';
 import { StatCard } from '../components/StatCard';
 import {
@@ -90,7 +91,7 @@ export default function Keywords() {
               <Input value={q} onChangeText={setQ} icon="search" onSubmitEditing={() => search()}
                 placeholder="Enter a service or business type — e.g. dental clinic" />
             </View>
-            <View style={{ width: 150 }}><Input value={city} onChangeText={setCity} placeholder="City" /></View>
+            <View style={{ width: 180 }}><CityInput value={city} onChangeText={setCity} /></View>
             <Button label="Find keywords" variant="primary" icon="sparkles" loading={searching} onPress={() => search()} />
           </Row>
           <Row gap={8} style={{ marginTop: 12 }}>
