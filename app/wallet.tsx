@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { Icon } from '../components/Icon';
 import {
   Badge, Between, Button, Card, CardBody, CardHead, Cols, Divider, Empty, Field, Grid,
@@ -7,9 +7,34 @@ import {
 } from '../components/ui';
 import { fmt } from '../lib/format';
 import { COSTS } from '../lib/nav';
+import { walletApi } from '../lib/api/wallet';
 import { useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
 import { useTheme } from '../theme/ThemeProvider';
+
+/* Razorpay's Checkout.js is a browser-only script — it self-registers
+   window.Razorpay, there's no npm module for it. Load it once, lazily. */
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: string, handler: (...args: unknown[]) => void) => void;
+    };
+  }
+}
+
+let checkoutScriptPromise: Promise<void> | null = null;
+function loadRazorpayCheckout(): Promise<void> {
+  if (checkoutScriptPromise) return checkoutScriptPromise;
+  checkoutScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Razorpay Checkout'));
+    document.body.appendChild(script);
+  });
+  return checkoutScriptPromise;
+}
 
 const PACKS = [
   { amt: 200, bonus: 0 }, { amt: 500, bonus: 25 }, { amt: 1000, bonus: 100 }, { amt: 2500, bonus: 325 },
@@ -32,18 +57,56 @@ export default function Wallet() {
   const [custom, setCustom] = useState('');
   const [gst, setGst] = useState('');
   const [filter, setFilter] = useState('');
+  const [paying, setPaying] = useState(false);
 
   const amount = sel != null ? PACKS[sel].amt : Number(custom) || 0;
   const bonus = sel != null ? PACKS[sel].bonus : Math.floor(amount * 0.15);
   const gstAmount = Math.round(amount * 0.18);
 
-  const pay = () => {
+  const pay = async () => {
     if (amount < 100) return toast('Choose an amount', 'Minimum recharge is ₹100', 'err');
-    run('pay', 2000, () => {
-      topup(amount, bonus);
-      toast('Payment successful 🎉', `${fmt.n(amount + bonus)} credits added`, 'ok');
-      setSel(null); setCustom('');
-    });
+    if (Platform.OS !== 'web') {
+      toast('Payments on device are coming soon', 'Use the browser build for now', 'err');
+      return;
+    }
+
+    setPaying(true);
+    try {
+      await loadRazorpayCheckout();
+      const order = await walletApi.createOrder(amount, gstAmount);
+
+      const rzp = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.orderId,
+        name: 'Limbu AI',
+        description: `Wallet top-up — ${fmt.n(amount + bonus)} credits`,
+        prefill: { name: user.name, email: user.email, contact: user.phone },
+        theme: { color: c.lemon },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            await walletApi.verifyPayment(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
+            topup(amount, bonus, 'Wallet recharge — Razorpay', response.razorpay_payment_id);
+            toast('Payment successful 🎉', `${fmt.n(amount + bonus)} credits added`, 'ok');
+            setSel(null); setCustom('');
+          } catch {
+            toast('Payment could not be verified', 'Contact support with your payment ID if you were charged', 'err');
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: { ondismiss: () => setPaying(false) },
+      });
+      rzp.on('payment.failed', () => {
+        toast('Payment failed', 'No credits were added', 'err');
+        setPaying(false);
+      });
+      rzp.open();
+    } catch (e) {
+      toast('Could not start payment', e instanceof Error ? e.message : String(e), 'err');
+      setPaying(false);
+    }
   };
 
   const items = transactions.filter((t) => !filter || t.type === filter);
@@ -145,7 +208,7 @@ export default function Wallet() {
                 </Stack>
 
                 <Button label="Pay with Razorpay" variant="primary" size="lg" icon="card" block
-                  style={{ marginTop: 16 }} loading={isBusy('pay')} onPress={pay} />
+                  style={{ marginTop: 16 }} loading={paying} onPress={pay} />
                 <Row gap={5} wrap={false} style={{ marginTop: 10, justifyContent: 'center' }}>
                   <Icon name="lock" size={12} color={c.text3} />
                   <Muted size={11.5}>Secured by Razorpay • UPI, cards, netbanking</Muted>

@@ -36,7 +36,7 @@ export const initialAccount = (): AccountState => ({
 export type AccountActions = {
   /** returns false when the wallet cannot cover the cost */
   spend: (n: number, label: string) => boolean;
-  topup: (amount: number, bonus: number, label?: string) => void;
+  topup: (amount: number, bonus: number, label?: string, ref?: string) => void;
   setSocial: (k: string, v: boolean) => void;
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void;
   clearNotifications: () => void;
@@ -56,12 +56,12 @@ export const createAccount: Slice<AccountActions> = (set, get) => ({
     return true;
   },
 
-  topup: (amount, bonus, label = 'Wallet recharge — Razorpay') => {
+  topup: (amount, bonus, label = 'Wallet recharge — Razorpay', ref) => {
     const { user, transactions } = get();
     set({
       user: { ...user, credits: user.credits + amount + bonus },
       transactions: [
-        { id: uid('tx'), type: 'credit', label, amount: amount + bonus, at: new Date().toISOString(), ref: `LMB${rand(100000, 999999)}` },
+        { id: uid('tx'), type: 'credit', label, amount: amount + bonus, at: new Date().toISOString(), ref: ref ?? `LMB${rand(100000, 999999)}` },
         ...transactions,
       ],
     });
