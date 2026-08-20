@@ -76,10 +76,10 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         onPress={() => openModal({ title: 'Switch business location', content: <BizSwitcher /> })}
         style={{ marginHorizontal: 14, marginBottom: 14, padding: 10, borderWidth: 1, borderColor: c.line,
           borderRadius: radius.md, backgroundColor: c.surface2, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Avatar name={biz.name} size={34} tone="ink" />
+        <Avatar name={biz?.name ?? '?'} size={34} tone="ink" />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <T size={12.5} weight="600" numberOfLines={1}>{biz.name}</T>
-          <Muted size={11}>{biz.loc}</Muted>
+          <T size={12.5} weight="600" numberOfLines={1}>{biz?.name ?? 'No business connected'}</T>
+          <Muted size={11}>{biz?.loc ?? 'Connect a Google Business Profile'}</Muted>
         </View>
         <Icon name="chevrons" size={16} color={c.muted} />
       </Pressable>

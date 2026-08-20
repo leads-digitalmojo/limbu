@@ -137,7 +137,7 @@ export default function Profile() {
                 </Row>
               </View>
               <Stack gap={9}>
-                {([['mail', user.email], ['phone', user.phone], ['building', biz.name],
+                {([['mail', user.email], ['phone', user.phone], ['building', biz?.name ?? 'No business connected'],
                    ['calendar', `Member since ${user.memberSince}`]] as const).map(([icon, v]) => (
                   <Row key={v} gap={9} wrap={false}>
                     <Icon name={icon as IconName} size={15} color={c.muted} />

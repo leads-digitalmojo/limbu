@@ -192,7 +192,7 @@ export default function Assets() {
               <CardHead title="Live preview" sub="How your next post will look" />
               <CardBody>
                 <Card style={{ overflow: 'hidden' }}>
-                  <PostCreative caption={biz.name} theme={brand.theme} ratio={brand.ratio} logo initials={fmt.initials(biz.name)} />
+                  <PostCreative caption={biz?.name ?? 'Your business'} theme={brand.theme} ratio={brand.ratio} logo initials={fmt.initials(biz?.name ?? 'Your business')} />
                   <View style={{ padding: 12 }}>
                     <Muted size={12.5}>
                       Theme {brand.theme} • Ratio {brand.ratio} • {Object.values(brand.images).reduce((a, b) => a + b, 0)} brand images in use

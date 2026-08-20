@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StatCard } from '../components/StatCard';
 import {
-  Badge, Between, Button, Card, CardBody, CardHead, CheckRow, Cols, Field, Grid, IconTile,
+  Badge, Between, Button, Card, CardBody, CardHead, CheckRow, Cols, Empty, Field, Grid, IconTile,
   Input, LinkButton, Muted, PageHeader, Row, Stack, T, useWork,
 } from '../components/ui';
 import { fmt } from '../lib/format';
@@ -83,6 +83,17 @@ export default function Website() {
       </View>
     </Card>
   );
+
+  if (!biz) {
+    return (
+      <View>
+        <PageHeader eyebrow="Website & leads" eyebrowIcon="monitor" title="Website Builder"
+          sub="Connect your Google Business Profile to build a site from your GMB data." />
+        <Card><Empty icon="monitor" title="No business connected"
+          desc="Connect a Google Business Profile location to generate a website." /></Card>
+      </View>
+    );
+  }
 
   return (
     <View>

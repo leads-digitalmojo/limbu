@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Icon } from '../../components/Icon';
 import { PostCreative } from '../../components/PostCreative';
 import {
-  Badge, Between, Button, Card, CardBody, CardHead, CheckRow, Chip, Cols, Divider, Field,
+  Badge, Between, Button, Card, CardBody, CardHead, CheckRow, Chip, Cols, Divider, Empty, Field,
   Grid, Input, Muted, PageHeader, Row, Segment, Stack, T, useWork,
 } from '../../components/ui';
 import { fmt } from '../../lib/format';
@@ -86,6 +86,17 @@ export default function NewPost() {
   };
 
   const toggle = <T,>(list: T[], v: T) => list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+
+  if (!biz) {
+    return (
+      <View>
+        <PageHeader eyebrow="Magic Post" eyebrowIcon="wand" title="Create a post"
+          sub="Connect your Google Business Profile before creating a post." />
+        <Card><Empty icon="wand" title="No business connected"
+          desc="Connect a Google Business Profile location to generate a Magic Post." /></Card>
+      </View>
+    );
+  }
 
   return (
     <View>

@@ -86,7 +86,7 @@ export default function Social() {
 
               {on ? (
                 <Between style={{ marginTop: 14, paddingTop: 13, borderTopWidth: 1, borderTopColor: c.line2 }}>
-                  <Muted>{biz.name} • synced just now</Muted>
+                  <Muted>{biz?.name ?? 'No business connected'} • synced just now</Muted>
                   <Button label="Disconnect" size="sm" variant="ghost" onPress={() => disconnect(nt.k)} />
                 </Between>
               ) : (
