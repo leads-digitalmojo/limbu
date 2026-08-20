@@ -32,17 +32,26 @@ export default function GmbConnect() {
   const { toast, openModal, closeModal } = useUI();
   const [loadingLocations, setLoadingLocations] = React.useState(false);
 
-  // the OAuth callback route redirects here with ?connected=1 or ?error=...
+  // The OAuth callback route redirects here with ?connected=1 or ?error=...
+  // via a hard, full-page browser navigation. At that exact moment
+  // expo-router's own navigator hasn't finished mounting yet on web, so
+  // calling router.setParams() here (as this used to, to clear the flag)
+  // throws "Attempted to navigate before mounting the Root Layout
+  // component." A ref guard does the same "handle this once" job without
+  // touching the router at all — the query param just stays in the URL,
+  // which is harmless.
+  const handledRedirect = React.useRef(false);
   React.useEffect(() => {
+    if (handledRedirect.current) return;
     if (params.error) {
+      handledRedirect.current = true;
       toast('Google connection failed', params.error, 'err');
-      router.setParams({ error: undefined });
       return;
     }
     if (params.connected) {
+      handledRedirect.current = true;
       gmbApi.status().then((s) => setGmbConnection(s.connected, s.email))
         .then(() => toast('Google Business Profile connected', undefined, 'ok'));
-      router.setParams({ connected: undefined });
     }
   }, [params.connected, params.error]);
 
