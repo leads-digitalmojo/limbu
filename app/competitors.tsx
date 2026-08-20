@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Donut } from '../components/charts';
+import { CityInput } from '../components/CityInput';
 import { Icon, IconName } from '../components/Icon';
 import { StatCard } from '../components/StatCard';
 import {
@@ -30,24 +31,34 @@ export default function Competitors() {
   const [kw, setKw] = useState(keywords[0]?.kw ?? '');
   const [city, setCity] = useState(biz?.city ?? '');
   const [bizId, setBizId] = useState(activeBiz);
+  // A rank audit only needs a name + city to search Google Maps against —
+  // it never actually needed a connected Google Business Profile. This is
+  // the fallback for testing before GMB is connected (or, in practice,
+  // while its API access is still pending Google's approval).
+  const [manualBusinessName, setManualBusinessName] = useState('');
   const [grid, setGrid] = useState('5');
   const [audit, setAudit] = useState<Audit | null>(null);
+  const [auditBusinessName, setAuditBusinessName] = useState('');
   const [auditing, setAuditing] = useState(false);
 
   const n = Number(grid);
   const cost = COSTS.audit[n];
+  const businessName = businesses.length > 0 ? (businesses.find((b) => b.id === bizId)?.name ?? '') : manualBusinessName.trim();
 
   const runAudit = async () => {
-    if (!biz) return;
     if (user.credits < cost) return toast('Not enough credits', `This audit needs ${cost} credits`, 'err');
     if (!kw) return toast('No keyword selected', 'Save a keyword in Keyword Planner first', 'err');
-    const businessName = businesses.find((b) => b.id === bizId)?.name ?? biz.name;
+    if (!businessName) return toast('Enter a business name', 'Needed to find your position in the results', 'err');
+    if (!city.trim()) return toast('Enter a city', undefined, 'err');
 
     setAuditing(true);
     try {
-      const { audit: live } = await competitorsApi.runAudit({ keyword: kw, city, businessName, gridSize: n as 1 | 3 | 5, bizId });
+      const { audit: live } = await competitorsApi.runAudit({
+        keyword: kw, city, businessName, gridSize: n as 1 | 3 | 5, bizId: businesses.length > 0 ? bizId : 'manual',
+      });
       spend(cost, `Competitor rank audit ${n}×${n}`);
       setAudit(live);
+      setAuditBusinessName(businessName);
       toast('Audit complete', `${cost} credits used — live from Google Maps`, 'ok');
     } catch {
       toast('Could not run audit', 'Check your Google Maps connection and try again', 'err');
@@ -106,17 +117,6 @@ export default function Competitors() {
 
   const cellSize = Math.min(66, Math.max(38, (Math.min(width, 900) - 420) / n));
 
-  if (!biz) {
-    return (
-      <View>
-        <PageHeader eyebrow="Local SEO" eyebrowIcon="map" title="Competitor Analysis"
-          sub="Connect your Google Business Profile to run a rank audit." />
-        <Card><Empty icon="map" title="No business connected"
-          desc="Connect a Google Business Profile location to run a geo-grid rank audit." /></Card>
-      </View>
-    );
-  }
-
   return (
     <View>
       <PageHeader eyebrow="Local SEO" eyebrowIcon="map" title="Competitor Analysis"
@@ -131,13 +131,17 @@ export default function Competitors() {
           ) : (
           <Grid cols={4} minWidth={200} gap={14}>
             <Field label="Business" style={{ marginBottom: 0 }}>
-              <Select value={bizId} onChange={setBizId} options={businesses.map((b) => ({ value: b.id, label: b.name }))} />
+              {businesses.length > 0 ? (
+                <Select value={bizId} onChange={setBizId} options={businesses.map((b) => ({ value: b.id, label: b.name }))} />
+              ) : (
+                <Input value={manualBusinessName} onChangeText={setManualBusinessName} placeholder="Business name" />
+              )}
             </Field>
             <Field label="Keyword" style={{ marginBottom: 0 }}>
               <Select value={kw} onChange={setKw} options={keywords.map((k) => ({ value: k.kw, label: k.kw }))} />
             </Field>
             <Field label="City" style={{ marginBottom: 0 }}>
-              <Input value={city} onChangeText={setCity} />
+              <CityInput value={city} onChangeText={setCity} />
             </Field>
             <Field label="Grid size" style={{ marginBottom: 0 }}>
               <Segment value={grid} onChange={setGrid}
@@ -205,7 +209,7 @@ export default function Competitors() {
                       ))}
                     </View>
                     <Muted style={{ textAlign: 'center', marginTop: 14 }}>
-                      Each square is a real search location around {biz.loc}. Tap a point for detail.
+                      Each square is a real search location around {audit.city}. Tap a point for detail.
                     </Muted>
                   </CardBody>
                 </Card>
@@ -223,11 +227,13 @@ export default function Competitors() {
                       </Row>
                       <Row wrap={false} gap={0} style={{ backgroundColor: c.lemonSoft, borderBottomWidth: 1, borderColor: c.line2 }}>
                         <View style={{ flex: 2.6, padding: 11 }}>
-                          <Row gap={7}><T size={13} weight="700">{biz.name}</T><Badge label="You" tone="lemon" /></Row>
+                          <Row gap={7}><T size={13} weight="700">{auditBusinessName}</T><Badge label="You" tone="lemon" /></Row>
                         </View>
                         <View style={{ flex: 1.2, padding: 11 }}><T size={13} weight="600">#{audit.avg}</T></View>
                         <View style={{ flex: 1.4, padding: 11 }}><T size={13}>{audit.coverage}% of grid</T></View>
-                        <View style={{ flex: 1.4, padding: 11 }}><T size={13}>{biz.rating}★</T></View>
+                        {/* The audit doesn't fetch the searched business's own rating —
+                            only competitors it finds in the results carry that from Places. */}
+                        <View style={{ flex: 1.4, padding: 11 }}><Muted>—</Muted></View>
                         <View style={{ flex: 1.2, padding: 11 }}><Progress value={audit.visibility} width={70} /></View>
                       </Row>
                       {audit.comps.map((cp) => (
