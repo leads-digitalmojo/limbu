@@ -8,9 +8,8 @@ import {
   Grid, Input, Muted, PageHeader, Row, Segment, Stack, T, useWork,
 } from '../../components/ui';
 import { fmt } from '../../lib/format';
-import { pick } from '../../lib/mock';
 import { COSTS, PLATFORMS, POST_THEMES, RATIOS } from '../../lib/nav';
-import { CAPTIONS } from '../../lib/mock';
+import { postsApi } from '../../lib/api/posts';
 import { uid } from '../../lib/mock';
 import { useBiz, useStore } from '../../store/useStore';
 import { useUI } from '../../store/ui';
@@ -40,31 +39,41 @@ export default function NewPost() {
   const [assets, setAssets] = useState<Record<string, boolean>>({ logo: true, character: false, product: true, uniform: false, background: true });
   const [schedule, setSchedule] = useState<'now' | 'schedule' | 'approval'>('now');
   const [generated, setGenerated] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const cost = platforms.length * COSTS.publishPerPlatform;
 
-  const generateCaption = () => {
-    const kw = selKeywords[0] ?? 'dentist near me';
-    const opener = pick(['✨', '🦷', '🔥', '📍', '💛']);
-    const base = lang === 'hi'
-      ? pick([
-        `अब ${biz.loc.split(',')[0]} में दर्द-रहित इलाज! आज ही अपॉइंटमेंट बुक करें।`,
-        `आपकी मुस्कान हमारी ज़िम्मेदारी — ${biz.name} पर विशेष ऑफर।`,
-        'सिर्फ इस हफ्ते: फुल डेंटल चेक-अप ₹499 में।'])
-      : pick(CAPTIONS);
-    const lead = prompt.trim() ? `${prompt.trim().replace(/\.$/, '')}. ` : '';
-    return `${opener} ${lead}${base}\n\n📍 ${biz.name}, ${biz.loc}\n📞 ${biz.phone}\n\n#${kw.replace(/\s+/g, '')} #${biz.city} #LimbuAI`;
+  const generateCaption = async (): Promise<string> => {
+    const { caption: text } = await postsApi.generateCaption({
+      businessName: biz.name, city: biz.city, phone: biz.phone, address: biz.loc,
+      prompt: prompt.trim() || 'A general update from the business', lang: lang as 'en' | 'hi',
+      keywords: selKeywords,
+    });
+    return text;
   };
 
   const onGenerate = () => {
     if (!prompt.trim()) return toast('Add a prompt first', 'Tell Limbu what the post is about', 'err');
     if (user.credits < COSTS.generate) return toast('Not enough credits', 'Recharge your wallet to generate', 'err');
-    run('gen', 1500, () => {
-      spend(COSTS.generate, 'AI post generation');
-      setCaption(generateCaption());
-      setGenerated(true);
-      toast('Caption + image generated', `${COSTS.generate} credits used`, 'ok');
-    });
+    setGenerating(true);
+    generateCaption()
+      .then((text) => {
+        spend(COSTS.generate, 'AI post generation');
+        setCaption(text);
+        setGenerated(true);
+        toast('Caption generated', `${COSTS.generate} credits used`, 'ok');
+      })
+      .catch((e) => toast('Could not generate caption', e instanceof Error ? e.message : String(e), 'err'))
+      .finally(() => setGenerating(false));
+  };
+
+  const [regenerating, setRegenerating] = useState(false);
+  const regenerate = () => {
+    setRegenerating(true);
+    generateCaption()
+      .then(setCaption)
+      .catch((e) => toast('Could not regenerate caption', e instanceof Error ? e.message : String(e), 'err'))
+      .finally(() => setRegenerating(false));
   };
 
   const onDeploy = () => {
@@ -140,7 +149,7 @@ export default function NewPost() {
                           onPress={() => toast('Listening…', 'Voice input captures your prompt in English or Hindi')} />
                       </Row>
                       <Button label="Generate with AI" variant="dark" icon="sparkles"
-                        loading={isBusy('gen')} onPress={onGenerate} />
+                        loading={generating} onPress={onGenerate} />
                     </Between>
 
                     {generated && (
@@ -150,8 +159,8 @@ export default function NewPost() {
                             <Icon name="sparkles" size={14} color={c.lemonHover} />
                             <T size={13} weight="700">AI generated caption</T>
                           </Row>
-                          <Button label="Regenerate" size="sm" variant="ghost" loading={isBusy('regen')}
-                            onPress={() => run('regen', 900, () => setCaption(generateCaption()))} />
+                          <Button label="Regenerate" size="sm" variant="ghost" loading={regenerating}
+                            onPress={regenerate} />
                         </Between>
                         <Input value={caption} onChangeText={setCaption} multiline />
                       </Card>
@@ -245,8 +254,8 @@ export default function NewPost() {
         side={
           <Card>
             <CardHead title="AI preview" sub="Live preview of your creative"
-              right={<Button label="" icon="refresh" size="sm" variant="ghost" loading={isBusy('pv')}
-                onPress={() => run('pv', 700, () => setCaption(generateCaption()))} />} />
+              right={<Button label="" icon="refresh" size="sm" variant="ghost" loading={regenerating}
+                onPress={regenerate} />} />
             <CardBody>
               <Card style={{ overflow: 'hidden' }}>
                 <PostCreative
