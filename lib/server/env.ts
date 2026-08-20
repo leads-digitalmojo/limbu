@@ -25,4 +25,7 @@ export const env = {
   // Analysis's geo-grid rank checker. A plain API key, billed per request —
   // see lib/server/googleMaps.ts.
   googleMapsApiKey: () => required('GOOGLE_MAPS_API_KEY'),
+
+  // Anthropic — AI-generated review replies. See lib/server/anthropic.ts.
+  anthropicApiKey: () => required('ANTHROPIC_API_KEY'),
 };
