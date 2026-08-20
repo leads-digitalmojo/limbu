@@ -2,7 +2,7 @@
 
 export type Keyword = { id: string; kw: string; vol: number; diff: number; cpc: string };
 
-export type GridPoint = { x: number; y: number; rank: number | null; competitor: string };
+export type GridPoint = { x: number; y: number; lat: number; lng: number; rank: number | null; competitor: string };
 
 export type Audit = {
   id: string; kw: string; city: string; bizId: string; n: number; pts: GridPoint[];

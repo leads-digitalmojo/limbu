@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         const rank = ownIndex === -1 ? null : ownIndex + 1;
 
         const topOther = results.find((r) => !namesMatch(r.name, businessName));
-        pts.push({ x, y, rank, competitor: topOther?.name ?? '' });
+        pts.push({ x, y, lat: point.lat, lng: point.lng, rank, competitor: topOther?.name ?? '' });
 
         results.forEach((r, i) => {
           if (namesMatch(r.name, businessName)) return;

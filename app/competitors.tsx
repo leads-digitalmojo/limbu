@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { Donut } from '../components/charts';
 import { CityInput } from '../components/CityInput';
 import { Icon, IconName } from '../components/Icon';
@@ -189,6 +189,11 @@ export default function Competitors() {
                       </Row>
                     } />
                   <CardBody>
+                    <Image
+                      source={{ uri: competitorsApi.mapImageUrl(audit.pts) }}
+                      style={{ width: '100%', height: 280, borderRadius: 10, marginBottom: 16, backgroundColor: c.surface2 }}
+                      resizeMode="cover"
+                    />
                     <View style={{ alignSelf: 'center' }}>
                       {Array.from({ length: audit.n }, (_, y) => (
                         <Row key={y} gap={7} wrap={false} style={{ marginBottom: 7 }}>
@@ -209,7 +214,7 @@ export default function Competitors() {
                       ))}
                     </View>
                     <Muted style={{ textAlign: 'center', marginTop: 14 }}>
-                      Each square is a real search location around {audit.city}. Tap a point for detail.
+                      The map above plots every real search point around {audit.city}. Tap a square below for detail on that point.
                     </Muted>
                   </CardBody>
                 </Card>
