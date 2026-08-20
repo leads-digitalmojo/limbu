@@ -10,7 +10,7 @@ import {
 } from '../components/ui';
 import { keywordsApi } from '../lib/api/keywords';
 import { fmt } from '../lib/format';
-import { KEYWORD_SEEDS, rand, uid } from '../lib/mock';
+import { uid } from '../lib/mock';
 import { useBiz, useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
 import { useTheme } from '../theme/ThemeProvider';
@@ -26,20 +26,9 @@ export default function Keywords() {
   const { run, isBusy } = useWork();
 
   const [q, setQ] = useState('');
-  const [city, setCity] = useState(biz.city);
+  const [city, setCity] = useState(biz?.city ?? '');
   const [results, setResults] = useState<Idea[]>([]);
   const [lastQ, setLastQ] = useState('');
-  const [source, setSource] = useState<'live' | 'demo'>('demo');
-
-  const demoIdeas = (term: string): Idea[] => {
-    const base: Idea[] = KEYWORD_SEEDS.map(([kw, vol, diff]) => ({ kw, vol, diff, cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
-    const extra: Idea[] = [
-      `${term} near me`, `${term} in ${city.toLowerCase()}`, `best ${term}`, `affordable ${term}`,
-      `${term} price`, `${term} reviews`, `24x7 ${term}`, `top rated ${term}`,
-    ].map((kw) => ({ kw, vol: rand(140, 9600), diff: rand(12, 82), cpc: (Math.random() * 3 + 0.4).toFixed(2) }));
-    return [...extra, ...base].sort((a, b) => b.vol - a.vol).slice(0, 16);
-  };
-
   const [searching, setSearching] = useState(false);
 
   const search = async (seed?: string) => {
@@ -52,19 +41,12 @@ export default function Keywords() {
       const all = ideas.slice(0, 16);
       setResults(all);
       setLastQ(term);
-      setSource('live');
       toast(`Found ${all.length} keywords`, 'Real search volume from Google Ads', 'ok');
-      return;
     } catch {
-      // no Ads credentials configured yet, or Google rejected the request — demo data either way
+      toast('Could not fetch keyword data', 'Check your Google Ads connection and try again', 'err');
     } finally {
       setSearching(false);
     }
-    const all = demoIdeas(term);
-    setResults(all);
-    setLastQ(term);
-    setSource('demo');
-    toast(`Found ${all.length} keywords`, 'Demo data — ranked by monthly search volume', 'ok');
   };
 
   const importExcel = () => openModal({
@@ -95,7 +77,7 @@ export default function Keywords() {
           <>
             <Button label="Import Excel" icon="excel" onPress={importExcel} />
             <Button label="PDF report" icon="file" loading={isBusy('pdf')}
-              onPress={() => run('pdf', 1100, () => toast('PDF ready', `keyword-report-${biz.city.toLowerCase()}.pdf`, 'ok'))} />
+              onPress={() => run('pdf', 1100, () => toast('PDF ready', `keyword-report-${(city || 'report').toLowerCase()}.pdf`, 'ok'))} />
             <Button label="WhatsApp report" variant="primary" icon="whatsapp" loading={isBusy('wa')}
               onPress={() => run('wa', 900, () => toast('Sent on WhatsApp', 'Report delivered to your registered number', 'ok'))} />
           </>
@@ -123,7 +105,7 @@ export default function Keywords() {
       <View style={{ marginBottom: 16 }}>
         <Grid cols={4} minWidth={220}>
           <StatCard icon="key" value={fmt.n(keywords.length)} label="Saved keywords" />
-          <StatCard icon="trend" tone="green" value={fmt.compact(keywords.reduce((a, k) => a + k.vol, 0))} label="Combined monthly volume" delta={14} />
+          <StatCard icon="trend" tone="green" value={fmt.compact(keywords.reduce((a, k) => a + k.vol, 0))} label="Combined monthly volume" />
           <StatCard icon="target" tone="blue" value={String(Math.round(keywords.reduce((a, k) => a + k.diff, 0) / Math.max(1, keywords.length)) || 0)} label="Avg. difficulty" />
           <StatCard icon="send" tone="pink" value={fmt.n(posts.filter((p) => p.keywords.length).length)} label="Posts using keywords" />
         </Grid>
@@ -134,14 +116,8 @@ export default function Keywords() {
         main={
           <Card>
             <CardHead title="Keyword ideas"
-              sub={results.length
-                ? `${results.length} ideas for "${lastQ}"${source === 'live' ? '' : ` in ${city}`}`
-                : 'Search to see ideas for your area'}
-              right={results.length
-                ? (source === 'live'
-                    ? <Badge label="Live from Google Ads" tone="green" icon="checkCircle" />
-                    : <Badge label="Demo data" tone="amber" />)
-                : undefined} />
+              sub={results.length ? `${results.length} ideas for "${lastQ}"` : 'Search to see keyword ideas'}
+              right={results.length ? <Badge label="Live from Google Ads" tone="green" icon="checkCircle" /> : undefined} />
             {results.length === 0 ? (
               <Empty icon="search" title="Start a search" desc="Enter a service above to see the keywords customers use near you." />
             ) : (

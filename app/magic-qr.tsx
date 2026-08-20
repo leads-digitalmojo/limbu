@@ -3,7 +3,7 @@ import { Platform, View } from 'react-native';
 import { QrCode } from '../components/QrCode';
 import { StatCard } from '../components/StatCard';
 import {
-  Avatar, Badge, Between, Button, Card, CardBody, CardHead, Cols, Field, Grid, IconTile,
+  Avatar, Badge, Between, Button, Card, CardBody, CardHead, Cols, Empty, Field, Grid, IconTile,
   Input, Muted, PageHeader, Row, Segment, Stack, Stars, T, useWork,
 } from '../components/ui';
 import { fmt } from '../lib/format';
@@ -52,6 +52,17 @@ export default function MagicQR() {
     }, { width: 1024, height: 1024 });
   };
 
+  if (!biz) {
+    return (
+      <View>
+        <PageHeader eyebrow="Review collection" eyebrowIcon="qr" title="Magic QR"
+          sub="Connect your Google Business Profile to generate a Magic QR." />
+        <Card><Empty icon="qr" title="No business connected"
+          desc="Connect a Google Business Profile location to generate your Magic QR." /></Card>
+      </View>
+    );
+  }
+
   return (
     <View>
       <PageHeader eyebrow="Review collection" eyebrowIcon="qr" title="Magic QR"
@@ -64,11 +75,11 @@ export default function MagicQR() {
         } />
 
       <View style={{ marginBottom: 16 }}>
-        <Grid cols={4} minWidth={220}>
-          <StatCard icon="qr" value={fmt.n(qr.scans)} label="Total scans" delta={31} />
-          <StatCard icon="star" tone="green" value={fmt.n(qr.reviewsCollected)} label="Reviews collected" delta={24} />
-          <StatCard icon="percent" tone="blue" value={`${Math.round((qr.reviewsCollected / Math.max(1, qr.scans)) * 100)}%`} label="Scan → review rate" />
-          <StatCard icon="shield" tone="orange" value={fmt.n(Math.round(qr.scans * 0.09))} label="Negative feedback caught privately" />
+        <Grid cols={3} minWidth={220}>
+          <StatCard icon="qr" value={fmt.n(qr.scans)} label="Total scans" />
+          <StatCard icon="star" tone="green" value={fmt.n(qr.reviewsCollected)} label="Reviews collected" />
+          <StatCard icon="percent" tone="blue"
+            value={qr.scans > 0 ? `${Math.round((qr.reviewsCollected / qr.scans) * 100)}%` : '—'} label="Scan → review rate" />
         </Grid>
       </View>
 
@@ -113,6 +124,9 @@ export default function MagicQR() {
             <Card>
               <CardHead title="Customer reviews via QR" sub="Latest feedback collected through the code" />
               <CardBody>
+                {reviews.length === 0 ? (
+                  <Empty icon="star" title="No reviews yet" desc="Reviews collected through this code will show up here." />
+                ) : (
                 <Stack gap={12}>
                   {reviews.slice(0, 4).map((r) => (
                     <Row key={r.id} gap={11} wrap={false} align="flex-start">
@@ -126,6 +140,7 @@ export default function MagicQR() {
                     </Row>
                   ))}
                 </Stack>
+                )}
               </CardBody>
             </Card>
           </>

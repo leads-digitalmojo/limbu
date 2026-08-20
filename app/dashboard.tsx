@@ -5,12 +5,11 @@ import { Icon, IconName } from '../components/Icon';
 import { StatCard } from '../components/StatCard';
 import { LineChart } from '../components/charts';
 import {
-  Badge, Between, Button, Card, CardBody, CardHead, Cols, Grid, IconTile, LinkButton,
+  Badge, Between, Button, Card, CardBody, CardHead, Cols, Empty, Grid, IconTile, LinkButton,
   Muted, PageHeader, Row, Segment, Stack, T, Tone,
 } from '../components/ui';
 import { gmbApi } from '../lib/api/gmb';
 import { fmt } from '../lib/format';
-import { lastDays, series } from '../lib/mock';
 import { useBiz, useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
 import { useTheme } from '../theme/ThemeProvider';
@@ -47,26 +46,25 @@ export default function Dashboard() {
 
   const [range, setRange] = useState('14');
   const n = Number(range);
-  const [chart, setChart] = useState(() => ({ views: series(14, 280, 90), calls: series(14, 46, 22), labels: lastDays(14) }));
-  const [chartSource, setChartSource] = useState<'live' | 'demo'>('demo');
+  const [chart, setChart] = useState<{ views: number[]; calls: number[]; labels: string[] } | null>(null);
 
-  async function loadChart(k: number): Promise<'live' | 'demo'> {
-    if (biz.googleLocationId) {
-      try {
-        const live = await gmbApi.getInsights(biz.googleLocationId, k);
-        setChart({ views: live.views, calls: live.calls, labels: live.labels });
-        setChartSource('live');
-        return 'live';
-      } catch {
-        toast('Could not load live data', 'Showing demo data instead', 'err');
-      }
+  async function loadChart(k: number): Promise<'live' | 'none'> {
+    if (!biz?.googleLocationId) {
+      setChart(null);
+      return 'none';
     }
-    setChart({ views: series(k, 280, 90), calls: series(k, 46, 22), labels: lastDays(k) });
-    setChartSource('demo');
-    return 'demo';
+    try {
+      const live = await gmbApi.getInsights(biz.googleLocationId, k);
+      setChart({ views: live.views, calls: live.calls, labels: live.labels });
+      return 'live';
+    } catch {
+      toast('Could not load insights', 'Check your Google connection and try again', 'err');
+      setChart(null);
+      return 'none';
+    }
   }
 
-  useEffect(() => { loadChart(n); }, [biz.googleLocationId]);
+  useEffect(() => { loadChart(n); }, [biz?.googleLocationId]);
 
   const changeRange = (r: string) => {
     setRange(r);
@@ -76,8 +74,20 @@ export default function Dashboard() {
   const noReply = reviews.filter((r) => !r.reply).length;
   const pending = posts.filter((p) => p.status === 'pending').length;
   const newLeads = leads.filter((l) => l.status === 'new').length;
-  const totalViews = chart.views.reduce((a, b) => a + b, 0);
-  const totalCalls = chart.calls.reduce((a, b) => a + b, 0);
+  const totalViews = chart ? chart.views.reduce((a, b) => a + b, 0) : null;
+  const totalCalls = chart ? chart.calls.reduce((a, b) => a + b, 0) : null;
+
+  if (!biz) {
+    return (
+      <View>
+        <PageHeader eyebrow="Live dashboard" eyebrowIcon="zap" title={`Welcome back, ${user.name.split(' ')[0]} 👋`}
+          sub="Connect your Google Business Profile to see your dashboard." />
+        <Hero title="Connect your Google Business Profile"
+          sub="Reviews, insights, posts, leads and every rank check start here — nothing else in Limbu works without it."
+          cta={<LinkButton label="Connect now" href="/gmb-connect" variant="primary" size="lg" icon="google" />} />
+      </View>
+    );
+  }
 
   return (
     <View>
@@ -95,7 +105,7 @@ export default function Dashboard() {
                   gmbApi.status().then((s) => setGmbConnection(s.connected, s.email)).catch(() => {}),
                 ]);
                 setRefreshing(false);
-                toast('Dashboard synced', source === 'live' ? 'Latest Google data pulled' : 'Refreshed (demo data)', 'ok');
+                toast('Dashboard synced', source === 'live' ? 'Latest Google data pulled' : 'No live insights available', source === 'live' ? 'ok' : 'err');
               }} />
             <LinkButton label="Create Magic Post" href="/posts/new" variant="primary" icon="wand" />
           </>
@@ -108,11 +118,11 @@ export default function Dashboard() {
             <Row wrap={false} style={{ flexShrink: 1 }}>
               <IconTile icon="google" />
               <View style={{ flexShrink: 1 }}>
-                <T size={13.5} weight="700">Connect your Google Business Profile</T>
-                <Muted>Most Limbu features need a connected GMB location.</Muted>
+                <T size={13.5} weight="700">Reconnect your Google Business Profile</T>
+                <Muted>{biz.name} was disconnected — reviews, insights and posting are paused until you reconnect.</Muted>
               </View>
             </Row>
-            <LinkButton label="Connect now" href="/gmb-connect" variant="dark" icon="link" />
+            <LinkButton label="Reconnect" href="/gmb-connect" variant="dark" icon="link" />
           </Between>
         </Card>
       )}
@@ -126,10 +136,10 @@ export default function Dashboard() {
 
       <View style={{ marginBottom: 16 }}>
         <Grid cols={4} minWidth={230}>
-          <StatCard icon="eye" tone="blue" value={fmt.n(totalViews)} label={`Profile views (${n}d)`} delta={42} spark={chart.views} sparkColor={c.blue} />
-          <StatCard icon="phone" tone="green" value={fmt.n(totalCalls)} label="Calls from Google" delta={18} spark={chart.calls} sparkColor={c.emerald} />
-          <StatCard icon="star" value={`${biz.rating.toFixed(1)}★`} label={`${biz.reviews} Google reviews`} delta={6} />
-          <StatCard icon="inbox" tone="pink" value={fmt.n(leads.length)} label="Website leads" delta={-4} spark={series(14, 6, 4)} sparkColor={c.pink} />
+          <StatCard icon="eye" tone="blue" value={totalViews == null ? '—' : fmt.n(totalViews)} label={`Profile views (${n}d)`} spark={chart?.views} sparkColor={c.blue} />
+          <StatCard icon="phone" tone="green" value={totalCalls == null ? '—' : fmt.n(totalCalls)} label="Calls from Google" spark={chart?.calls} sparkColor={c.emerald} />
+          <StatCard icon="star" value={biz.reviews > 0 ? `${biz.rating.toFixed(1)}★` : '—'} label={biz.reviews > 0 ? `${biz.reviews} Google reviews` : 'No reviews synced yet'} />
+          <StatCard icon="inbox" tone="pink" value={fmt.n(leads.length)} label="Website leads" />
         </Grid>
       </View>
 
@@ -140,20 +150,27 @@ export default function Dashboard() {
             <Card>
               <CardHead title="Growth this fortnight" sub="Profile views vs calls from your Google Business Profile"
                 right={
-                  <Row gap={8} wrap={false}>
-                    {chartSource === 'live'
-                      ? <Badge label="Live from Google" tone="green" icon="checkCircle" />
-                      : <Badge label="Demo data" tone="amber" />}
-                    <Segment value={range} onChange={changeRange}
-                      items={[{ key: '14', label: '14d' }, { key: '30', label: '30d' }, { key: '90', label: '90d' }]} />
-                  </Row>
+                  chart
+                    ? <Row gap={8} wrap={false}>
+                        <Badge label="Live from Google" tone="green" icon="checkCircle" />
+                        <Segment value={range} onChange={changeRange}
+                          items={[{ key: '14', label: '14d' }, { key: '30', label: '30d' }, { key: '90', label: '90d' }]} />
+                      </Row>
+                    : undefined
                 } />
               <CardBody>
-                <LineChart labels={chart.labels}
-                  series={[
-                    { name: 'Profile views', data: chart.views, color: c.lemonHover },
-                    { name: 'Calls', data: chart.calls, color: c.blue },
-                  ]} />
+                {chart ? (
+                  <LineChart labels={chart.labels}
+                    series={[
+                      { name: 'Profile views', data: chart.views, color: c.lemonHover },
+                      { name: 'Calls', data: chart.calls, color: c.blue },
+                    ]} />
+                ) : (
+                  <Empty icon="chart" title="No insights yet"
+                    desc={biz.googleLocationId
+                      ? 'Could not load Google performance data right now.'
+                      : 'This location was added before real sync existed — reconnect it to see growth data.'} />
+                )}
               </CardBody>
             </Card>
 

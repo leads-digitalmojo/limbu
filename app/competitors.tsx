@@ -9,7 +9,6 @@ import {
 } from '../components/ui';
 import { competitorsApi } from '../lib/api/competitors';
 import { fmt } from '../lib/format';
-import { COMPETITORS, KEYWORD_SEEDS, pick, rand, uid } from '../lib/mock';
 import { COSTS } from '../lib/nav';
 import { useBiz, useStore } from '../store/useStore';
 import { useUI } from '../store/ui';
@@ -21,33 +20,6 @@ const rankColor = (r: number | null) =>
   r == null ? RANK_COLORS[5] : r <= 1 ? RANK_COLORS[0] : r <= 3 ? RANK_COLORS[1]
     : r <= 7 ? RANK_COLORS[2] : r <= 12 ? RANK_COLORS[3] : RANK_COLORS[4];
 
-function buildAudit(n: number, kw: string, city: string, bizId: string): Audit {
-  const pts: GridPoint[] = [];
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      const dist = Math.hypot(x - (n - 1) / 2, y - (n - 1) / 2);
-      let rank: number | null = Math.max(1, Math.round(1 + dist * 1.7 + (Math.random() * 3 - 1)));
-      if (rank > 20) rank = null;
-      pts.push({ x, y, rank, competitor: pick(COMPETITORS) });
-    }
-  }
-  const ranked = pts.filter((p) => p.rank != null) as { rank: number }[];
-  const avg = ranked.reduce((a, p) => a + p.rank, 0) / Math.max(1, ranked.length);
-  const top3 = pts.filter((p) => p.rank && p.rank <= 3).length;
-  const comps = COMPETITORS.map((name) => ({
-    name, freq: rand(3, n * n), avg: (Math.random() * 8 + 1.4).toFixed(1),
-    rating: (Math.random() * 1.4 + 3.6).toFixed(1), reviews: rand(60, 900),
-  })).sort((a, b) => Number(a.avg) - Number(b.avg));
-
-  return {
-    id: uid('audit'), kw, city, bizId, n, pts, avg: avg.toFixed(1), top3,
-    coverage: Math.round((ranked.length / pts.length) * 100),
-    visibility: Math.round((top3 / pts.length) * 100),
-    best: Math.min(...ranked.map((p) => p.rank)),
-    comps, at: new Date().toISOString(),
-  };
-}
-
 export default function Competitors() {
   const { c, width } = useTheme();
   const biz = useBiz();
@@ -55,20 +27,20 @@ export default function Competitors() {
   const { toast, openModal, closeModal } = useUI();
   const { run, isBusy } = useWork();
 
-  const kwOptions = keywords.length ? keywords.map((k) => k.kw) : KEYWORD_SEEDS.slice(0, 6).map((k) => k[0]);
-  const [kw, setKw] = useState(kwOptions[0]);
-  const [city, setCity] = useState(biz.city);
+  const [kw, setKw] = useState(keywords[0]?.kw ?? '');
+  const [city, setCity] = useState(biz?.city ?? '');
   const [bizId, setBizId] = useState(activeBiz);
   const [grid, setGrid] = useState('5');
   const [audit, setAudit] = useState<Audit | null>(null);
   const [auditing, setAuditing] = useState(false);
-  const [auditSource, setAuditSource] = useState<'live' | 'demo'>('demo');
 
   const n = Number(grid);
   const cost = COSTS.audit[n];
 
   const runAudit = async () => {
+    if (!biz) return;
     if (user.credits < cost) return toast('Not enough credits', `This audit needs ${cost} credits`, 'err');
+    if (!kw) return toast('No keyword selected', 'Save a keyword in Keyword Planner first', 'err');
     const businessName = businesses.find((b) => b.id === bizId)?.name ?? biz.name;
 
     setAuditing(true);
@@ -76,18 +48,12 @@ export default function Competitors() {
       const { audit: live } = await competitorsApi.runAudit({ keyword: kw, city, businessName, gridSize: n as 1 | 3 | 5, bizId });
       spend(cost, `Competitor rank audit ${n}×${n}`);
       setAudit(live);
-      setAuditSource('live');
       toast('Audit complete', `${cost} credits used — live from Google Maps`, 'ok');
-      return;
     } catch {
-      // no Maps credentials configured, city not found, or Google rejected the request — demo data either way
+      toast('Could not run audit', 'Check your Google Maps connection and try again', 'err');
     } finally {
       setAuditing(false);
     }
-    spend(cost, `Competitor rank audit ${n}×${n}`);
-    setAudit(buildAudit(n, kw, city, bizId));
-    setAuditSource('demo');
-    toast('Audit complete', `${cost} credits used — demo data`, 'ok');
   };
 
   const openPoint = (p: GridPoint, i: number, a: Audit) => openModal({
@@ -140,6 +106,17 @@ export default function Competitors() {
 
   const cellSize = Math.min(66, Math.max(38, (Math.min(width, 900) - 420) / n));
 
+  if (!biz) {
+    return (
+      <View>
+        <PageHeader eyebrow="Local SEO" eyebrowIcon="map" title="Competitor Analysis"
+          sub="Connect your Google Business Profile to run a rank audit." />
+        <Card><Empty icon="map" title="No business connected"
+          desc="Connect a Google Business Profile location to run a geo-grid rank audit." /></Card>
+      </View>
+    );
+  }
+
   return (
     <View>
       <PageHeader eyebrow="Local SEO" eyebrowIcon="map" title="Competitor Analysis"
@@ -149,12 +126,15 @@ export default function Competitors() {
       <Card style={{ marginBottom: 16 }}>
         <CardHead title="New rank audit" sub={`Costs ${cost} credits for a ${n}×${n} grid`} />
         <CardBody>
+          {keywords.length === 0 ? (
+            <Empty icon="key" title="No saved keywords" desc="Save a keyword in Keyword Planner first, then come back to run an audit." />
+          ) : (
           <Grid cols={4} minWidth={200} gap={14}>
             <Field label="Business" style={{ marginBottom: 0 }}>
               <Select value={bizId} onChange={setBizId} options={businesses.map((b) => ({ value: b.id, label: b.name }))} />
             </Field>
             <Field label="Keyword" style={{ marginBottom: 0 }}>
-              <Select value={kw} onChange={setKw} options={kwOptions.map((k) => ({ value: k, label: k }))} />
+              <Select value={kw} onChange={setKw} options={keywords.map((k) => ({ value: k.kw, label: k.kw }))} />
             </Field>
             <Field label="City" style={{ marginBottom: 0 }}>
               <Input value={city} onChangeText={setCity} />
@@ -164,10 +144,13 @@ export default function Competitors() {
                 items={[{ key: '1', label: '1×1' }, { key: '3', label: '3×3' }, { key: '5', label: '5×5' }]} />
             </Field>
           </Grid>
-          <Row gap={12} style={{ marginTop: 16 }}>
-            <Button label="Run rank audit" variant="primary" size="lg" icon="target" loading={auditing} onPress={runAudit} />
-            <Muted>Scans real Google Maps positions from up to {n * n} geographic points</Muted>
-          </Row>
+          )}
+          {keywords.length > 0 && (
+            <Row gap={12} style={{ marginTop: 16 }}>
+              <Button label="Run rank audit" variant="primary" size="lg" icon="target" loading={auditing} onPress={runAudit} />
+              <Muted>Scans real Google Maps positions from up to {n * n} geographic points</Muted>
+            </Row>
+          )}
         </CardBody>
       </Card>
 
@@ -175,8 +158,8 @@ export default function Competitors() {
         <View>
           <View style={{ marginBottom: 16 }}>
             <Grid cols={4} minWidth={220}>
-              <StatCard icon="target" value={`#${audit.avg}`} label="Average map position" delta={12} />
-              <StatCard icon="eye" tone="green" value={`${audit.visibility}%`} label="Visibility (top 3)" delta={9} />
+              <StatCard icon="target" value={`#${audit.avg}`} label="Average map position" />
+              <StatCard icon="eye" tone="green" value={`${audit.visibility}%`} label="Visibility (top 3)" />
               <StatCard icon="map" tone="blue" value={`${audit.coverage}%`} label="Grid coverage" />
               <StatCard icon="crown" tone="orange" value={`#${audit.best}`} label="Best rank achieved" />
             </Grid>
@@ -190,9 +173,7 @@ export default function Competitors() {
                   <CardHead title="Geographic rank grid" sub={`“${audit.kw}” in ${audit.city} • ${audit.n}×${audit.n} points`}
                     right={
                       <Row gap={10} wrap={false} align="center">
-                        {auditSource === 'live'
-                          ? <Badge label="Live from Google Maps" tone="green" icon="checkCircle" />
-                          : <Badge label="Demo data" tone="amber" />}
+                        <Badge label="Live from Google Maps" tone="green" icon="checkCircle" />
                         <Row gap={6}>
                           {[['#1', 0], ['2–3', 1], ['4–7', 2], ['8–12', 3], ['13–20', 4], ['20+', 5]].map(([l, i]) => (
                             <Row key={String(l)} gap={4} wrap={false}>
@@ -275,29 +256,6 @@ export default function Competitors() {
                     <Between><Muted>Points in top 3</Muted><T size={13} weight="700">{audit.top3} / {audit.n * audit.n}</T></Between>
                     <Between style={{ marginTop: 6 }}><Muted>Best position</Muted><T size={13} weight="700">#{audit.best}</T></Between>
                     <Between style={{ marginTop: 6 }}><Muted>Grid coverage</Muted><T size={13} weight="700">{audit.coverage}%</T></Between>
-                  </CardBody>
-                </Card>
-
-                <Card>
-                  <CardHead title="AI recommendations" sub="Ranked by impact" />
-                  <CardBody>
-                    <Stack gap={12}>
-                      {([
-                        ['star', 'Collect 25 more reviews', `You need roughly 25 reviews to overtake ${audit.comps[0].name} on review count in the local pack.`, 'lemon', 'High', 'red'],
-                        ['send', `Post 3× per week with “${audit.kw}”`, 'Businesses posting weekly rank 34% higher on average across the grid.', 'blue', 'Med', 'amber'],
-                        ['pin', 'Add service areas to your profile', 'Your coverage drops sharply beyond 3 km. Listing nearby localities widens the radius.', 'green', 'Low', 'slate'],
-                        ['image', 'Upload 10 fresh photos', 'Profiles with recent photos get 42% more direction requests.', 'pink', 'Low', 'slate'],
-                      ] as const).map(([icon, title, desc, tone, pri, priTone]) => (
-                        <Row key={title} gap={11} wrap={false} align="flex-start">
-                          <IconTile icon={icon as IconName} tone={tone as any} size={32} />
-                          <View style={{ flex: 1 }}>
-                            <T size={12.5} weight="700">{title}</T>
-                            <Muted size={11.5} style={{ marginTop: 3 }}>{desc}</Muted>
-                          </View>
-                          <Badge label={pri} tone={priTone as any} />
-                        </Row>
-                      ))}
-                    </Stack>
                   </CardBody>
                 </Card>
 
