@@ -1,6 +1,5 @@
 /* Google Business Profile: locations, connection, reviews, Magic QR.
    OWNER: Abiram */
-import { BUSINESSES, seedReviews } from '../../lib/mock';
 import type { Business, Qr, Review } from '../types';
 import type { Slice } from './shared';
 
@@ -12,10 +11,10 @@ export type GmbState = {
 };
 
 export const initialGmb = (): GmbState => ({
-  businesses: BUSINESSES,
-  gmbConnected: true,
-  reviews: seedReviews(),
-  qr: { slug: 'sunrise-dental', scans: 412, reviewsCollected: 96, threshold: 4 },
+  businesses: [],
+  gmbConnected: false,
+  reviews: [],
+  qr: { slug: '', scans: 0, reviewsCollected: 0, threshold: 4 },
 });
 
 export type GmbActions = {

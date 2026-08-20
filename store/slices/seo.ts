@@ -1,6 +1,5 @@
 /* Local SEO: keyword planner and Maps rank audits.
    OWNER: Abiram */
-import { seedKeywords } from '../../lib/mock';
 import type { Audit, Keyword } from '../types';
 import type { Slice } from './shared';
 
@@ -10,7 +9,7 @@ export type SeoState = {
 };
 
 export const initialSeo = (): SeoState => ({
-  keywords: seedKeywords(),
+  keywords: [],
   audits: [],
 });
 
