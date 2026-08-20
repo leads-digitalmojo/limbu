@@ -28,4 +28,9 @@ export const env = {
 
   // Anthropic — AI-generated review replies. See lib/server/anthropic.ts.
   anthropicApiKey: () => required('ANTHROPIC_API_KEY'),
+
+  // Razorpay — real wallet top-ups. Test-mode keys are instant/self-serve
+  // (no approval queue), from the Razorpay dashboard. See lib/server/razorpay.ts.
+  razorpayKeyId: () => required('RAZORPAY_KEY_ID'),
+  razorpayKeySecret: () => required('RAZORPAY_KEY_SECRET'),
 };
